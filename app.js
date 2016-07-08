@@ -25,6 +25,29 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', routes);
 app.use('/users', users);
 
+// mongooseを使用してDB設計・操作
+var mongoose = require('mongoose');
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/chat');
+
+// Chatモデルの登録
+mongoose.model('Chat', new mongoose.Schema({
+  name        : String,
+  message     : String,
+  createdDate : {type: Date, default: Date.now}
+}));
+
+// /chatsにGETアクセスした時、Chat一覧を取得するAPI
+app.get('/chats', function(req, res) {
+  // 全てのchatを取得して送る
+  mongoose.model('Chat')
+    .find({})
+    .sort('-createdDate')
+    .exec(function(err, chats) {
+      res.send(chats);
+    });
+});
+
+
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   var err = new Error('Not Found');

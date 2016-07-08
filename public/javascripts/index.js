@@ -1,13 +1,30 @@
 angular.module('myApp', [])
-  .controller('MyController', ['$scope', '$timeout', function($scope, $timeout) {
+  .service('ChatService', ['$http', function($http) {
+    // チャットリストを取得する
+    this.getChatList = function() {
+      var chats = [];
+      $http({
+        method: 'GET',
+        url:    '/chats'
+      })
+      .success(function(data, status, headers, config) {
+        angular.extend(chats, data);
+      });
+      return chats;
+    }
+  }])
+  .controller('MyController', ['$scope', '$timeout', 'ChatService',
+  function($scope, $timeout, ChatService) {
     // Socketの作成
     var socket = io();
     
-    $scope.chats = [];
+    // チャットリストを取得する
+    $scope.chats = ChatService.getChatList();
+    
     // chatというイベントを受信した時
     socket.on('chat', function(chat) {
       $timeout(function() {
-        $scope.chats.push(chat);
+        $scope.chats.unshift(chat);
       });
     });
     

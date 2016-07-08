@@ -89,6 +89,9 @@ function onListening() {
   debug('Listening on ' + bind);
 }
 
+// mongoDB操作モジュールの読み込み
+var mongoose = require('mongoose');
+
 // 受信側のSocketの用意
 var io = require('socket.io').listen(server);
 
@@ -98,8 +101,16 @@ io.sockets.on('connection', function(socket) {
   
   // chatというイベントを受信した時、送られた内容を全てのクライアントに送信する
   socket.on('chat', function(chat) {
-    console.log('message:', chat.message);
-    io.emit('chat', chat);
+    // 何らかが送られているなら登録する
+    if(chat.name && chat.message) {
+      var newChat     = new (mongoose.model('Chat'))();
+      newChat.name    = chat.name;
+      newChat.message = chat.message;
+      newChat.save();
+      // 登録日を追加して全体に送る
+      chat.createdDate = newChat.createdDate;
+      io.emit('chat', chat);
+    }
   });
   
   // 接続が切れたとき
