@@ -1,5 +1,18 @@
 extends layout
 
 block content
-  h1= title
-  p Welcome to #{title}
+  form(ng-submit='sendMessage()')
+    label(for='name') 名前：
+    input#name(name='name', type='text', ng-model='name')
+    br
+    label(for='message') 内容：
+    input#message(name='message', type='text', ng-model='message')
+    br
+    input(type='submit', value='送信')
+  //- ng-cloakで{{}}が見えないようにする
+  ul(ng-repeat='chat in chats track by $index' ng-cloak)
+    li {{chat.name}}「{{chat.message}}」
+    
+block scripts
+  script(src='/socket.io/socket.io.js')
+  script(src='/javascripts/index.js')

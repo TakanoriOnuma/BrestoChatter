@@ -1,7 +1,9 @@
 doctype html
-html
+html(ng-app='myApp')
   head
     title= title
     link(rel='stylesheet', href='/stylesheets/style.css')
-  body
+    script(src='//ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular.min.js')
+  body(ng-controller='MyController')
     block content
+    block scripts

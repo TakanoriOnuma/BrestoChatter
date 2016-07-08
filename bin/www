@@ -88,3 +88,22 @@ function onListening() {
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
 }
+
+// 受信側のSocketの用意
+var io = require('socket.io').listen(server);
+
+io.sockets.on('connection', function(socket) {
+  // 接続idを確認
+  console.log('connected', socket.id);
+  
+  // chatというイベントを受信した時、送られた内容を全てのクライアントに送信する
+  socket.on('chat', function(chat) {
+    console.log('message:', chat.message);
+    io.emit('chat', chat);
+  });
+  
+  // 接続が切れたとき
+  socket.on('disconnect', function() {
+    console.log('disconnect');
+  });
+});
