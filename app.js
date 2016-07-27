@@ -6,7 +6,7 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 
 var routes = require('./routes/index');
-var login = require('./routes/login');
+var user = require('./routes/user');
 
 var app = express();
 
@@ -34,7 +34,7 @@ var loginCheck = function(req, res, next) {
     next();
   }
   else {
-    res.redirect('/login');
+    res.redirect('/user/login');
   }
 }
 
@@ -47,8 +47,8 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ルーティングの設定
-app.use('/login', login);
-app.get('/', loginCheck, routes);
+app.get('/', loginCheck, routes);   // 後でapp.useに戻す（バリデーションはroutes内でやるべき）
+app.use('/user', user);
 
 // mongooseを使用してDB設計・操作
 var mongoose = require('mongoose');

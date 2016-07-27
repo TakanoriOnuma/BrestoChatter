@@ -1,0 +1,14 @@
+extends ../layout
+
+block content
+  form
+    label(for='email') メールアドレス：
+    input#email(type='text', name='email')
+    br
+    label(for='password') パスワード：
+    input#password(type='password', name='password')
+    br
+    input(type='submit', value='ログイン')
+
+  br
+  a(href='./registration') ユーザ登録
