@@ -11,6 +11,11 @@ router.get('/login', function(req, res, next) {
 router.get('/registration', function(req, res, next) {
   res.render('user/registration', { title: 'ユーザ登録' });
 });
+// ユーザ登録
+router.post('/registration', function(req, res, next) {
+  console.log(req.body);
+  res.send(true);
+})
 // emailの重複チェック
 router.get('/registration/:email', function(req, res, next) {
   mongoose.model('User').find({email: req.params.email}, function(err, emails) {
