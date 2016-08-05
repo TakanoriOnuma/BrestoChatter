@@ -10,10 +10,11 @@ block content
         span(ng-message='required') 入力は必須です。
     div
       label(for='email') メールアドレス：
-      input#email(type='email', name='email', ng-model='email', required)
+      input#email(type='email', name='email', ng-model='email', required, my-unique='./registration/')
       span(ng-messages='regForm.email.$error', ng-cloak)
         span(ng-message='required') 入力は必須です。
         span(ng-message='email') メールアドレスを正しい形式で入力してください。
+        span(ng-message='unique') このメールアドレスは既に登録されています。
     div
       label(for='password') パスワード：
       input#password(type='password', name='password', ng-model='password', required, ng-minlength='4')
