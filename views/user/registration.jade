@@ -2,14 +2,29 @@ extends ../layout
 
 block content
   h2 ユーザ登録
-  form(novalidate)
-    label(for='userName') ユーザ名：
-    input#userName(type='text', name='userName')
-    br
-    label(for='email') メールアドレス：
-    input#email(type='email', name='email')
-    br
-    label(for='password') パスワード：
-    input#password(type='password', name='password')
-    br
-    input(type='submit', value='送信')
+  form(name='regForm', ng-submit='onsubmit()', novalidate, ng-model-options="{updateOn: 'blur'}")
+    div
+      label(for='userName') ユーザ名：
+      input#userName(type='text', name='userName', ng-model='userName', required)
+      span(ng-messages='regForm.userName.$error', ng-cloak)
+        span(ng-message='required') 入力は必須です。
+    div
+      label(for='email') メールアドレス：
+      input#email(type='email', name='email', ng-model='email', required)
+      span(ng-messages='regForm.email.$error', ng-cloak)
+        span(ng-message='required') 入力は必須です。
+        span(ng-message='email') メールアドレスを正しい形式で入力してください。
+    div
+      label(for='password') パスワード：
+      input#password(type='password', name='password', ng-model='password', required, ng-minlength='4')
+      span(ng-messages='regForm.password.$error', ng-cloak)
+        span(ng-message='required') 入力は必須です。
+        span(ng-message='minlength') パスワードは4文字以上入力してください。
+    input(type='submit', value='登録', ng-disabled='regForm.$invalid')
+
+block stylesheets
+  link(rel='stylesheet', href='/stylesheets/form.css')
+
+block scripts
+  script(src='https://ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular-messages.min.js')
+  script(src='/javascripts/user/registration.js')
