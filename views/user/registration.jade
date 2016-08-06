@@ -21,7 +21,7 @@ block content
       span(ng-messages='regForm.password.$error', ng-cloak)
         span(ng-message='required') 入力は必須です。
         span(ng-message='minlength') パスワードは4文字以上入力してください。
-    input(type='submit', value='登録', ng-disabled='regForm.$invalid')
+    input(type='submit', value='登録', ng-disabled='regForm.$invalid || regForm.$submitted')
 
 block stylesheets
   link(rel='stylesheet', href='/stylesheets/form.css')

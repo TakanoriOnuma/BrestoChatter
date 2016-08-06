@@ -12,12 +12,10 @@ angular.module('myForm', [])
         ctrl.$asyncValidators.unique = function(modelValue, viewValue) {
           var value = modelValue || viewValue;
           // Promiseオブジェクトを返す
-          console.log(attr.myUnique + value);
           return $http.get(attr.myUnique + value)
-            .success(function(data, status, headers, config) {
-              console.log(data);
+            .then(function(response) {
               // 何も情報がなければ未登録なのでtrueを返す
-              return (data === '');
+              return (response.data === '') ? true : $q.reject('value exists!');
             });
         };
 

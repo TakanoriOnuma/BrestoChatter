@@ -4,10 +4,12 @@ angular.module('myApp', ['ngMessages', 'myForm'])
       var data = angular.copy($scope.user);
       var hash = CryptoJS.SHA3(data.password);
       data.password = hash.toString(CryptoJS.enc.Base64);
-      console.log(data);
       $http.post('./registration', data)
         .success(function(data, status, headers, config) {
           console.log(data);
+          if(data) {
+            window.location.href = './login';
+          }
         });
     };
   }]);
