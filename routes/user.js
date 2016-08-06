@@ -13,8 +13,21 @@ router.get('/registration', function(req, res, next) {
 });
 // ユーザ登録
 router.post('/registration', function(req, res, next) {
-  console.log(req.body);
-  res.send(true);
+  var newUser = new (mongoose.model('User'))();
+  // 送信されたデータを1つ1つコピーする
+  for(var key in req.body) {
+    newUser[key] = req.body[key];
+  }
+  console.log(newUser);
+  newUser.save(function(err) {
+    if(err) {
+      console.log(err);
+      res.send(false);
+    }
+    else {
+      res.send(true);
+    }
+  });
 })
 // emailの重複チェック
 router.get('/registration/:email', function(req, res, next) {
