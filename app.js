@@ -69,17 +69,6 @@ mongoose.model('Room', new mongoose.Schema({
   password : String
 }));
 
-// /chatsにGETアクセスした時、Chat一覧を取得するAPI
-app.get('/chats', function(req, res) {
-  // 全てのchatを取得して送る
-  mongoose.model('Chat')
-    .find({})
-    .sort('-createdDate')
-    .exec(function(err, chats) {
-      res.send(chats);
-    });
-});
-
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   var err = new Error('Not Found');

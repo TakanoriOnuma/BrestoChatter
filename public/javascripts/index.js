@@ -33,7 +33,7 @@ angular.module('myApp', [])
           .success(function(data, status, headers, config) {
             console.log(data);
             if(data) {
-              window.location.href = '/room/chat';
+              window.location.href = '/room/chat/chat';
             }
             else {
               $scope.data.error[roomId] = 'パスワードが違います。';
