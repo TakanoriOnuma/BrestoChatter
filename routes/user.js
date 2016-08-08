@@ -7,6 +7,18 @@ var mongoose = require('mongoose');
 router.get('/login', function(req, res, next) {
   res.render('user/login', { title: 'ログイン' });
 });
+// ログイン
+router.post('/login', function(req, res, next) {
+  mongoose.model('User').findOne({email: req.body.email}, function(err, user) {
+    if(user.password === req.body.password) {
+      req.session.user = user;
+      res.send(true);
+    }
+    else {
+      res.send(false);
+    }
+  });
+});
 // 登録画面
 router.get('/registration', function(req, res, next) {
   res.render('user/registration', { title: 'ユーザ登録' });

@@ -1,14 +1,28 @@
 extends ../layout
 
 block content
-  form(novalidate)
+  form(ng-submit='login()', novalidate)
     label(for='email') メールアドレス：
-    input#email(type='text', name='email')
+    input#email(type='text', name='email', ng-model='user.email')
     br
     label(for='password') パスワード：
-    input#password(type='password', name='password')
+    input#password(type='password', name='password', ng-model='user.password')
     br
     input(type='submit', value='ログイン')
+    br
+    span.error-msg(ng-repeat='error in errors' ng-cloak)
+      span {{error}}
+      br
 
   br
   a(href='./registration') ユーザ登録
+
+block stylesheets
+  link(rel='stylesheet', href='/stylesheets/form.css')
+
+block scripts
+  script(src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core-min.js')
+  script(src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/x64-core-min.js')
+  script(src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/sha3-min.js')
+  script(src='/javascripts/user/login.js')
+  

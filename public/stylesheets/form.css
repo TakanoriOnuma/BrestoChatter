@@ -1,3 +1,7 @@
 input.ng-dirty.ng-invalid {
   background-color: #fee;
 }
+
+.error-msg {
+  color: #f00;
+}
