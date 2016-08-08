@@ -1,0 +1,35 @@
+extends ../layout
+
+block content
+  h2 ユーザ登録
+  form(name='regForm', ng-submit='onsubmit()', novalidate, ng-model-options="{updateOn: 'blur'}")
+    div
+      label(for='userName') ユーザ名：
+      input#userName(type='text', name='userName', ng-model='user.userName', required)
+      span(ng-messages='regForm.userName.$error', ng-cloak)
+        span(ng-message='required') 入力は必須です。
+    div
+      label(for='email') メールアドレス：
+      input#email(type='email', name='email', ng-model='user.email', required, my-unique='./registration/')
+      span(ng-messages='regForm.email.$error', ng-cloak)
+        span(ng-message='required') 入力は必須です。
+        span(ng-message='email') メールアドレスを正しい形式で入力してください。
+        span(ng-message='unique') このメールアドレスは既に登録されています。
+    div
+      label(for='password') パスワード：
+      input#password(type='password', name='password', ng-model='user.password', required, ng-minlength='4')
+      span(ng-messages='regForm.password.$error', ng-cloak)
+        span(ng-message='required') 入力は必須です。
+        span(ng-message='minlength') パスワードは4文字以上入力してください。
+    input(type='submit', value='登録', ng-disabled='regForm.$invalid || regForm.$submitted')
+
+block stylesheets
+  link(rel='stylesheet', href='/stylesheets/form.css')
+
+block scripts
+  script(src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core-min.js')
+  script(src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/x64-core-min.js')
+  script(src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/sha3-min.js')
+  script(src='https://ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular-messages.min.js')
+  script(src='/javascripts/modules/myForm.js')
+  script(src='/javascripts/user/registration.js')
