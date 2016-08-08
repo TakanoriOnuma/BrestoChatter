@@ -28,16 +28,6 @@ app.use(session({
   }
 }));
 
-// 認証用バリデーター関数を用意
-var loginCheck = function(req, res, next) {
-  if(req.session.user) {
-    next();
-  }
-  else {
-    res.redirect('/user/login');
-  }
-}
-
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 app.use(logger('dev'));
@@ -47,7 +37,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ルーティングの設定
-app.get('/', loginCheck, routes);   // 後でapp.useに戻す（バリデーションはroutes内でやるべき）
+app.use('/', routes);
 app.use('/user', user);
 
 // mongooseを使用してDB設計・操作
