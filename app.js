@@ -7,6 +7,7 @@ var bodyParser = require('body-parser');
 
 var routes = require('./routes/index');
 var user = require('./routes/user');
+var room = require('./routes/room');
 
 var app = express();
 
@@ -39,6 +40,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ルーティングの設定
 app.use('/', routes);
 app.use('/user', user);
+app.use('/room', room);
 
 // mongooseを使用してDB設計・操作
 var mongoose = require('mongoose');
