@@ -1,5 +1,8 @@
-// 認証用バリデーター関数を用意
-var loginCheck = function(req, res, next) {
+// 関数群をセット
+var func = {}
+
+// ユーザログインしているかチェック
+func.loginCheck = function(req, res, next) {
   if(req.session.user) {
     next();
   }
@@ -8,4 +11,14 @@ var loginCheck = function(req, res, next) {
   }
 }
 
-exports.loginCheck = loginCheck;
+// 部屋に入っているかチェック
+func.enterCheck = function(req, res, next) {
+  if(req.session.room) {
+    next();
+  }
+  else {
+    res.redirect('/');
+  }
+}
+
+module.exports = func;

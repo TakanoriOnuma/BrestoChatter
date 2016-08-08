@@ -12,6 +12,19 @@ router.get('/list', function(req, res, next) {
       res.send(rooms);
     });
 });
+// ログイン
+router.post('/login', function(req, res, next) {
+  mongoose.model('Room').findById(req.body.roomId, function(err, room) {
+    console.log(room);
+    if(room.password === req.body.pass) {
+      req.session.room = room;
+      res.send(true);
+    }
+    else {
+      res.send(false);
+    }
+  });
+})
 // 部屋作成画面
 router.get('/registration', function(req, res, next) {
   res.render('room/registration', { title: '部屋の作成' })
