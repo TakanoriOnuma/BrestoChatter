@@ -60,6 +60,13 @@ mongoose.model('User', new mongoose.Schema({
   password : String
 }));
 
+// Roomモデルの登録
+mongoose.model('Room', new mongoose.Schema({
+  title    : String,
+  author   : String,
+  password : String
+}));
+
 // /chatsにGETアクセスした時、Chat一覧を取得するAPI
 app.get('/chats', function(req, res) {
   // 全てのchatを取得して送る
