@@ -17,6 +17,11 @@ angular.module('myApp', [])
   function($scope, $timeout, RoomService) {
     // ルームリストを取得する
     $scope.rooms = RoomService.getRoomList();
+    $scope.data = { pass: {} };
+
+    $scope.login = function(roomId) {
+      console.log($scope.data.pass[roomId]);
+    }
   }]);
   
   

@@ -2,10 +2,16 @@ extends layout
 
 block content
   h1 部屋一覧
-  //- ng-cloakで{{}}が見えないようにする
-  ul(ng-repeat='room in rooms track by $index' ng-cloak)
-    li
-      {{room}}
+  ul
+    //- ng-cloakで{{}}が見えないようにする
+    li(ng-repeat='room in rooms track by $index' ng-cloak)
+      form(ng-submit="login(room._id)", novalidate)
+        span {{room.title}}
+        br
+        span 作成者：{{room.author}}
+        br
+        input(type='password', placeholder='パスワード', ng-model='data.pass[room._id]')
+        input(type='submit', value='入場')
 
   a(href='/room/registration') 部屋の作成
     

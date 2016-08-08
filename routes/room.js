@@ -5,9 +5,12 @@ var mongoose = require('mongoose');
 
 // 部屋一覧を取得
 router.get('/list', function(req, res, next) {
-  mongoose.model('Room').find({}, function(err, rooms) {
-    res.send(rooms);
-  });
+  mongoose.model('Room')
+    .find({})
+    .select('title author')
+    .exec(function(err, rooms) {
+      res.send(rooms);
+    });
 });
 // 部屋作成画面
 router.get('/registration', function(req, res, next) {
