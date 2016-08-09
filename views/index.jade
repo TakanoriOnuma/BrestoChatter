@@ -1,20 +1,23 @@
 extends layout
 
 block content
-  form(ng-submit='sendMessage()')
-    label(for='name') 名前：
-    input#name(name='name', type='text', ng-model='name')
-    br
-    label(for='message') 内容：
-    input#message(name='message', type='text', ng-model='message')
-    br
-    input(type='submit', value='送信')
-  //- ng-cloakで{{}}が見えないようにする
-  ul(ng-repeat='chat in chats track by $index' ng-cloak)
-    li
-      {{chat.name}} ({{chat.createdDate | date: 'yyyy/MM/dd HH:mm:ss'}}) <br>
-      {{chat.message}}
+  h1 部屋一覧
+  ul
+    //- ng-cloakで{{}}が見えないようにする
+    li(ng-repeat='room in rooms track by $index' ng-cloak)
+      form(ng-submit="login(room._id)", novalidate)
+        span {{room.title}}
+        br
+        span 作成者：{{room.author}}
+        br
+        input(type='password', placeholder='パスワード', ng-model='data.pass[room._id]')
+        input(type='submit', value='入場')
+        span {{data.error[room._id]}}
+
+  a(href='/room/registration') 部屋の作成
     
 block scripts
-  script(src='/socket.io/socket.io.js')
+  script(src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core-min.js')
+  script(src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/x64-core-min.js')
+  script(src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/sha3-min.js')
   script(src='/javascripts/index.js')

@@ -7,6 +7,8 @@ var bodyParser = require('body-parser');
 
 var routes = require('./routes/index');
 var user = require('./routes/user');
+var room = require('./routes/room');
+var chat = require('./routes/chat');
 
 var app = express();
 
@@ -39,6 +41,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ルーティングの設定
 app.use('/', routes);
 app.use('/user', user);
+app.use('/room', room);
+app.use('/room/chat', chat);
 
 // mongooseを使用してDB設計・操作
 var mongoose = require('mongoose');
@@ -46,7 +50,8 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/chat');
 
 // Chatモデルの登録
 mongoose.model('Chat', new mongoose.Schema({
-  name        : String,
+  roomId      : Object,
+  userName    : String,
   message     : String,
   createdDate : {type: Date, default: Date.now}
 }));
@@ -58,16 +63,12 @@ mongoose.model('User', new mongoose.Schema({
   password : String
 }));
 
-// /chatsにGETアクセスした時、Chat一覧を取得するAPI
-app.get('/chats', function(req, res) {
-  // 全てのchatを取得して送る
-  mongoose.model('Chat')
-    .find({})
-    .sort('-createdDate')
-    .exec(function(err, chats) {
-      res.send(chats);
-    });
-});
+// Roomモデルの登録
+mongoose.model('Room', new mongoose.Schema({
+  title    : String,
+  author   : String,
+  password : String
+}));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

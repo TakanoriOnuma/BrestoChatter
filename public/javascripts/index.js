@@ -1,42 +1,49 @@
 angular.module('myApp', [])
-  .service('ChatService', ['$http', function($http) {
-    // チャットリストを取得する
-    this.getChatList = function() {
-      var chats = [];
+  .service('RoomService', ['$http', function($http) {
+    // ルームリストを取得する
+    this.getRoomList = function() {
+      var rooms = [];
       $http({
         method: 'GET',
-        url:    '/chats'
+        url:    '/room/list'
       })
       .success(function(data, status, headers, config) {
-        angular.extend(chats, data);
+        angular.extend(rooms, data);
       });
-      return chats;
+      return rooms;
     }
   }])
-  .controller('MyController', ['$scope', '$timeout', 'ChatService',
-  function($scope, $timeout, ChatService) {
-    // Socketの作成
-    var socket = io();
-    
-    // チャットリストを取得する
-    $scope.chats = ChatService.getChatList();
-    
-    // chatというイベントを受信した時
-    socket.on('chat', function(chat) {
-      $timeout(function() {
-        $scope.chats.unshift(chat);
-      });
-    });
-    
-    // submitイベント時の処理
-    $scope.sendMessage = function() {
-      // chatイベントを送信する
-      socket.emit('chat', {
-        name:    $scope.name,
-        message: $scope.message
-      });
-      $scope.message = '';
-    };
+  .controller('MyController', ['$scope', '$http', '$timeout', 'RoomService',
+  function($scope, $http, $timeout, RoomService) {
+    // ルームリストを取得する
+    $scope.rooms = RoomService.getRoomList();
+    $scope.data = { pass: {}, error: {} };
+
+    $scope.login = function(roomId) {
+      $scope.data.error[roomId] = '';
+      var pass = $scope.data.pass[roomId];
+      console.log($scope.data.pass[roomId]);
+      if(pass) {
+        var hash = CryptoJS.SHA3(pass);
+        var data = {
+          roomId : roomId,
+          pass   : hash.toString(CryptoJS.enc.Base64)
+        };
+        $http.post('./room/login', data)
+          .success(function(data, status, headers, config) {
+            console.log(data);
+            if(data) {
+              window.location.href = '/room/chat/chat';
+            }
+            else {
+              $scope.data.error[roomId] = 'パスワードが違います。';
+            }
+          });
+      }
+      else {
+        $scope.data.error[roomId] = 'パスワードを入力してください。';
+      }
+    }
   }]);
   
   

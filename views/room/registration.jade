@@ -1,0 +1,30 @@
+extends ../layout
+
+block content
+  h2 部屋の作成
+  form(name='regForm', ng-submit='onsubmit()', novalidate, ng-model-options="{updateOn: 'blur'}")
+    div
+      label(for='title') タイトル：
+      input#title(type='text', name='title', ng-model='room.title', required)
+      span(ng-messages='regForm.title.$error', ng-cloak)
+        span(ng-message='required') 入力は必須です。
+    div
+      label(for='password') パスワード：
+      input#password(type='password', name='password', ng-model='room.password', required, ng-minlength='4')
+      span(ng-messages='regForm.password.$error', ng-cloak)
+        span(ng-message='required') 入力は必須です。
+        span(ng-message='minlength') パスワードは4文字以上入力してください。
+    div
+      span スケジュール(未実装)
+    br
+    input(type='submit', value='登録', ng-disabled='regForm.$invalid || regForm.$submitted')
+
+block stylesheets
+  link(rel='stylesheet', href='/stylesheets/form.css')
+
+block scripts
+  script(src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core-min.js')
+  script(src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/x64-core-min.js')
+  script(src='https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/sha3-min.js')
+  script(src='https://ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular-messages.min.js')
+  script(src='/javascripts/room/registration.js')

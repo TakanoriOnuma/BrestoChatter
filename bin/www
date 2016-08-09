@@ -102,10 +102,12 @@ io.sockets.on('connection', function(socket) {
   // chatというイベントを受信した時、送られた内容を全てのクライアントに送信する
   socket.on('chat', function(chat) {
     // 何らかが送られているなら登録する
-    if(chat.name && chat.message) {
-      var newChat     = new (mongoose.model('Chat'))();
-      newChat.name    = chat.name;
-      newChat.message = chat.message;
+    if(chat.message) {
+      var newChat = new (mongoose.model('Chat'))();
+      for(var key in chat) {
+        newChat[key] = chat[key];
+      }
+      console.log(newChat);
       newChat.save();
       // 登録日を追加して全体に送る
       chat.createdDate = newChat.createdDate;
