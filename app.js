@@ -50,7 +50,8 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/chat');
 
 // Chatモデルの登録
 mongoose.model('Chat', new mongoose.Schema({
-  name        : String,
+  roomId      : Object,
+  userName    : String,
   message     : String,
   createdDate : {type: Date, default: Date.now}
 }));

@@ -23,18 +23,24 @@ angular.module('myApp', [])
 
     // chatというイベントを受信した時
     socket.on('chat', function(chat) {
-      $timeout(function() {
-        $scope.chats.unshift(chat);
-      });
+      console.log('recieve:', chat);
+      // 同じroomIdなら反映させる
+      if(chat.roomId === $scope.chat.roomId) {
+        $timeout(function() {
+          $scope.chats.unshift(chat);
+        });
+      }
     });
 
     // submitイベント時の処理
     $scope.sendMessage = function() {
+      if($scope.chat.message === '') {
+        return;
+      }
+
+      console.log($scope.chat);
       // chatイベントを送信する
-      socket.emit('chat', {
-        name:    $scope.name,
-        message: $scope.message
-      });
-      $scope.message = '';
+      socket.emit('chat', $scope.chat);
+      $scope.chat.message = '';
     };
   }]);
