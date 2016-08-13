@@ -17,7 +17,7 @@ router.get('/chats', sessionCheck.enterCheck, function(req, res) {
   // roomIdに紐づかれたchatを取得して送る
   mongoose.model('Chat')
     .find({ roomId: req.session.room._id })
-    .sort('-createdDate')
+    .sort('createdDate')
     .exec(function(err, chats) {
       res.send(chats);
     });

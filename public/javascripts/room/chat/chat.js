@@ -1,4 +1,39 @@
 angular.module('myApp', [])
+  // チャット一覧を表示するディレクティブ
+  .directive('myChatList', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        chats: '='
+      },
+      template: '<ul class="my-chat-list" ng-cloak>' +
+                '  <li ng-repeat="chat in chats track by $index">' +
+                '    <my-chat chat="chat"></my-chat>' +
+                '  </li>' +
+                '</ul>',
+      link: function(scope, element, attrs) {
+        // chats配列を監視して、変化があればスクロールを最下部に移動する
+        scope.$watchCollection('chats', function(newValue, oldValue, scope) {
+          element[0].scrollTop = element[0].scrollHeight;
+        });
+      }
+    };
+  })
+  // チャットディレクティブ
+  .directive('myChat', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        chat: '='
+      },
+      template: '<div class="my-chat">' +
+                '    {{chat.userName}} ({{chat.createdDate | date: "yyyy/MM/dd HH:mm:ss"}})<br>' +
+                '    {{chat.message}}' +
+                '</div>'
+    };
+  })
   .service('ChatService', ['$http', function($http) {
     // チャットリストを取得する
     this.getChatList = function() {
@@ -27,7 +62,7 @@ angular.module('myApp', [])
       // 同じroomIdなら反映させる
       if(chat.roomId === $scope.chat.roomId) {
         $timeout(function() {
-          $scope.chats.unshift(chat);
+          $scope.chats.push(chat);
         });
       }
     });

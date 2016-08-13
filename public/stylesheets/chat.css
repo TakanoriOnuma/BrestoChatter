@@ -1,0 +1,13 @@
+#message {
+  width: 80%;
+}
+
+.my-chat-list {
+  height: 200px;
+  border: solid #000 1px;
+  overflow-y: scroll;
+}
+
+.my-chat:hover {
+  background-color: #aaf;
+}
