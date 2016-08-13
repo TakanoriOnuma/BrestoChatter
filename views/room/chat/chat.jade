@@ -1,18 +1,27 @@
 extends ../../layout
 
 block content
-  form(ng-submit='sendMessage()')
-    label(for='message') 内容：
-    input#message(name='message', type='text', ng-model='chat.message', ng-init="chat.message=''")
-    br
-    input(type='submit', value='送信')
-    input(type='hidden', ng-model='chat.roomId', ng-init="chat.roomId='#{roomId}'")
-    input(type='hidden', ng-model='chat.userName', ng-init="chat.userName='#{userName}'")
-  ul
-    //- ng-cloakで{{}}が見えないようにする
-    li(ng-repeat='chat in chats track by $index' ng-cloak)
-      {{chat.userName}} ({{chat.createdDate | date: 'yyyy/MM/dd HH:mm:ss'}}) <br>
-      {{chat.message}}
+  table(border='1', width='100%')
+    tr
+      td(colspan='2') スケジュール
+    tr
+      td(colspan='2', height='300px') ホワイトボード
+    tr
+      td
+        ul
+          //- ng-cloakで{{}}が見えないようにする
+          li(ng-repeat='chat in chats track by $index' ng-cloak)
+            {{chat.userName}} ({{chat.createdDate | date: 'yyyy/MM/dd HH:mm:ss'}}) <br>
+            {{chat.message}}
+        form(ng-submit='sendMessage()')
+          label(for='message') 内容：
+          input#message(name='message', type='text', ng-model='chat.message', ng-init="chat.message=''")
+          input(type='submit', value='送信')
+          input(type='hidden', ng-model='chat.roomId', ng-init="chat.roomId='#{roomId}'")
+          input(type='hidden', ng-model='chat.userName', ng-init="chat.userName='#{userName}'")            
+      td メンバーリストとか
+
+
 
 block scripts
   script(src='/socket.io/socket.io.js')
