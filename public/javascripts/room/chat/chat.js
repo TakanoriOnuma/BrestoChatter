@@ -28,10 +28,30 @@ angular.module('myApp', [])
       scope: {
         chat: '='
       },
-      template: '<div class="my-chat">' +
-                '    {{chat.userName}} ({{chat.createdDate | date: "yyyy/MM/dd HH:mm:ss"}})<br>' +
-                '    {{chat.message}}' +
-                '</div>'
+      template: '<div class="my-chat" chat-id="{{chat._id}}">' +
+                '  {{chat.userName}} ({{chat.createdDate | date: "yyyy/MM/dd HH:mm:ss"}})<br>' +
+                '  {{chat.message}}' +
+                '</div>',
+      link: function(scope, element, attrs) {
+        element.draggable({helper: 'clone'});
+      }
+    };
+  })
+  // ホワイトボードディレクティブ
+  .directive('myWhiteboard', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      template: '<div class="my-whiteboard">' +
+                '  <span>ホワイトボード</span>' +
+                '</div>',
+      link: function(scope, element, attrs) {
+        element.droppable({
+          drop: function(event, ui) {
+            console.log('chat-id:', ui.draggable.attr('chat-id'));
+          }
+        });
+      }
     };
   })
   .service('ChatService', ['$http', function($http) {

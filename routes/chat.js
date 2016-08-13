@@ -6,9 +6,10 @@ var sessionCheck = require('../validation/sessionCheck');
 
 router.get('/chat', sessionCheck.loginCheck, sessionCheck.enterCheck, function(req, res, next) {
   res.render('room/chat/chat.jade', {
-    title    : 'Chat',
-    roomId   : req.session.room._id,
-    userName : req.session.user.userName
+    title      : 'Chat',
+    jQueryFlag : true,
+    roomId     : req.session.room._id,
+    userName   : req.session.user.userName
   });
 });
 
