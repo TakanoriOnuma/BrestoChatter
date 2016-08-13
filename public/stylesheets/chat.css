@@ -15,4 +15,12 @@
 .my-whiteboard {
   width: 100%;
   height: 100%;
+  position: relative;
+}
+
+.my-post-it {
+  width: 100px;
+  height: 100px;
+  background-color: #ffa;
+  position: absolute;
 }

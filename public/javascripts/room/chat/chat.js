@@ -44,15 +44,52 @@ angular.module('myApp', [])
       replace: true,
       template: '<div class="my-whiteboard">' +
                 '  <span>ホワイトボード</span>' +
+                '  <my-post-it pos="position">post-it</my-post-it>' +
                 '</div>',
       link: function(scope, element, attrs) {
+        scope.position = {x: 10, y: 20};
         element.droppable({
+          accept: '.my-chat',
           drop: function(event, ui) {
             console.log('chat-id:', ui.draggable.attr('chat-id'));
+            scope.$apply(function() {
+              scope.position.x += 10;
+            });
           }
         });
       }
     };
+  })
+  // ホワイトボード上で使う付箋
+  .directive('myPostIt', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      transclude: true,
+      scope: {
+        pos: '='
+      },
+      template: '<div class="my-post-it" ng-transclude>' +
+                '</div>',
+      link: function(scope, element, attrs, ngModelController) {
+        element.draggable({
+          containment: 'parent',
+          drag: function(event, ui) {
+            console.log(ui.position);
+            scope.pos.x = ui.position.left;
+            scope.pos.y = ui.position.top;
+          }
+        });
+
+        scope.$watch('pos', function(newValue, oldValue, scope) {
+          console.log(newValue, oldValue);
+          element.css({
+            top:  scope.pos.y,
+            left: scope.pos.x
+          })
+        }, true);
+      }
+    }
   })
   .service('ChatService', ['$http', function($http) {
     // チャットリストを取得する
