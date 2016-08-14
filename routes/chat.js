@@ -24,4 +24,14 @@ router.get('/chats', sessionCheck.enterCheck, function(req, res) {
     });
 });
 
+// /post-itsにGETアクセスした時、PostIt一覧を取得するAPI
+router.get('/post-its', sessionCheck.enterCheck, function(req, res) {
+  // roomIdに紐づかれたpostItを取得して送る
+  mongoose.model('PostIt')
+    .find({ roomId: req.session.room._id })
+    .exec(function(err, postIts) {
+      res.send(postIts);
+    });
+});
+
 module.exports = router;

@@ -56,6 +56,13 @@ mongoose.model('Chat', new mongoose.Schema({
   createdDate : {type: Date, default: Date.now}
 }));
 
+// PostItモデルの登録
+mongoose.model('PostIt', new mongoose.Schema({
+  roomId   : Object,
+  position : Object,
+  message  : String
+}));
+
 // Userモデルの登録
 mongoose.model('User', new mongoose.Schema({
   email    : {type: String, unique: true},

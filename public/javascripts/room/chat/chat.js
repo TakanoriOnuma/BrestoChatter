@@ -47,7 +47,7 @@ angular.module('myApp', [])
       },
       template: '<div class="my-whiteboard">' +
                 '  <span>ホワイトボード</span>' +
-                '  <my-post-it ng-repeat="postIt in postIts track by $index" pos="postIt.position">' +
+                '  <my-post-it ng-repeat="postIt in postIts track by $index" pos="postIt.position" post-it-id="postIt._id">' +
                 '    {{postIt.message}}' +
                 '  </my-post-it>' +
                 '</div>',
@@ -55,7 +55,6 @@ angular.module('myApp', [])
         element.droppable({
           accept: '.my-chat',
           drop: function(event, ui) {
-            console.log(element.scrollTop());
             var message = $('.message', ui.draggable).text();
             var rootPos   = element.position();
             rootPos.top  -= element.scrollTop();
@@ -65,7 +64,7 @@ angular.module('myApp', [])
               message  : message,
               position : { x: pos.left - rootPos.left, y: pos.top - rootPos.top }
             };
-            scope.$parent.addPostIt(postIt);
+            scope.$parent.createPostIt(postIt);
           }
         });
       }
@@ -78,7 +77,8 @@ angular.module('myApp', [])
       replace: true,
       transclude: true,
       scope: {
-        pos: '='
+        postItId : '=',
+        pos      : '='
       },
       template: '<div class="my-post-it" ng-transclude></div>',
       link: function(scope, element, attrs, ngModelController) {
@@ -87,11 +87,11 @@ angular.module('myApp', [])
           drag: function(event, ui) {
             scope.pos.x = ui.position.left;
             scope.pos.y = ui.position.top;
+            scope.$emit('movePostIt', scope.postItId, scope.pos);
           }
         });
 
         scope.$watch('pos', function(newValue, oldValue, scope) {
-          console.log(newValue, oldValue);
           element.css({
             top:  scope.pos.y,
             left: scope.pos.x
@@ -101,26 +101,26 @@ angular.module('myApp', [])
     }
   })
   .service('ChatService', ['$http', function($http) {
-    // チャットリストを取得する
-    this.getChatList = function() {
-      var chats = [];
+    // データリストを取得する
+    this.getDataList = function(url) {
+      var dataList = [];
       $http({
         method: 'GET',
-        url:    './chats'
+        url:    url
       })
       .success(function(data, status, headers, config) {
-        angular.extend(chats, data);
+        angular.extend(dataList, data);
       });
-      return chats;
+      return dataList;
     }
   }])
-  .controller('MyController', ['$scope', '$timeout', 'ChatService',
-  function($scope, $timeout, ChatService) {
+  .controller('MyController', ['$scope', '$timeout', '$filter', 'ChatService',
+  function($scope, $timeout, $filter, ChatService) {
     // Socketの作成
     var socket = io();
 
     // チャットリストを取得する
-    $scope.chats = ChatService.getChatList();
+    $scope.chats = ChatService.getDataList('./chats');
 
     // chatというイベントを受信した時
     socket.on('chat', function(chat) {
@@ -146,12 +146,38 @@ angular.module('myApp', [])
     };
 
     // 付箋リストをセットする
-    $scope.postIts = [
-      { message: 'post-it', position: {x: 10, y: 20} }
-    ];
-    $scope.addPostIt = function(postIt) {
-      $timeout(function() {
-        $scope.postIts.push(postIt);
-      });
+    $scope.postIts = ChatService.getDataList('./post-its');
+    // 付箋の作成
+    $scope.createPostIt = function(postIt) {
+      postIt.roomId = $scope.chat.roomId;
+      // post-it-createイベントを送信する
+      socket.emit('post-it-create', postIt);
     };
+
+    // post-it-createというイベントを受信した時
+    socket.on('post-it-create', function(postIt) {
+      console.log('recieve:', postIt);
+      // 同じroomIdなら反映させる
+      if(postIt.roomId === $scope.chat.roomId) {
+        $timeout(function() {
+          $scope.postIts.push(postIt);
+        });
+      }
+    });
+
+    // 付箋の移動（下からのイベントをそのままsocketに送る）
+    $scope.$on('movePostIt', function(event, postItId, position) {
+      // post-it-moveイベントを送信する
+      socket.emit('post-it-move', postItId, position);
+    });
+    // 付箋移動イベントを受信した時
+    socket.on('post-it-move', function(postItId, position) {
+      var postIt = $filter('filter')($scope.postIts, { _id: postItId });
+      if(postIt.length === 1) {
+        $timeout(function() {
+          postIt[0].position.x = position.x;
+          postIt[0].position.y = position.y;
+        });
+      }
+    })
   }]);
