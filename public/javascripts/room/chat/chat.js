@@ -30,7 +30,7 @@ angular.module('myApp', [])
       },
       template: '<div class="my-chat" chat-id="{{chat._id}}">' +
                 '  {{chat.userName}} ({{chat.createdDate | date: "yyyy/MM/dd HH:mm:ss"}})<br>' +
-                '  {{chat.message}}' +
+                '  <span class="message">{{chat.message}}</span>' +
                 '</div>',
       link: function(scope, element, attrs) {
         element.draggable({helper: 'clone'});
@@ -42,19 +42,30 @@ angular.module('myApp', [])
     return {
       restrict: 'E',
       replace: true,
+      scope: {
+        postIts: '='
+      },
       template: '<div class="my-whiteboard">' +
                 '  <span>ホワイトボード</span>' +
-                '  <my-post-it pos="position">post-it</my-post-it>' +
+                '  <my-post-it ng-repeat="postIt in postIts track by $index" pos="postIt.position">' +
+                '    {{postIt.message}}' +
+                '  </my-post-it>' +
                 '</div>',
       link: function(scope, element, attrs) {
-        scope.position = {x: 10, y: 20};
         element.droppable({
           accept: '.my-chat',
           drop: function(event, ui) {
-            console.log('chat-id:', ui.draggable.attr('chat-id'));
-            scope.$apply(function() {
-              scope.position.x += 10;
-            });
+            console.log(element.scrollTop());
+            var message = $('.message', ui.draggable).text();
+            var rootPos   = element.position();
+            rootPos.top  -= element.scrollTop();
+            rootPos.left -= element.scrollLeft();
+            var pos = ui.helper.position();
+            var postIt = {
+              message  : message,
+              position : { x: pos.left - rootPos.left, y: pos.top - rootPos.top }
+            };
+            scope.$parent.addPostIt(postIt);
           }
         });
       }
@@ -69,13 +80,11 @@ angular.module('myApp', [])
       scope: {
         pos: '='
       },
-      template: '<div class="my-post-it" ng-transclude>' +
-                '</div>',
+      template: '<div class="my-post-it" ng-transclude></div>',
       link: function(scope, element, attrs, ngModelController) {
         element.draggable({
           containment: 'parent',
           drag: function(event, ui) {
-            console.log(ui.position);
             scope.pos.x = ui.position.left;
             scope.pos.y = ui.position.top;
           }
@@ -134,5 +143,15 @@ angular.module('myApp', [])
       // chatイベントを送信する
       socket.emit('chat', $scope.chat);
       $scope.chat.message = '';
+    };
+
+    // 付箋リストをセットする
+    $scope.postIts = [
+      { message: 'post-it', position: {x: 10, y: 20} }
+    ];
+    $scope.addPostIt = function(postIt) {
+      $timeout(function() {
+        $scope.postIts.push(postIt);
+      });
     };
   }]);
