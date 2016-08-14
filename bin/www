@@ -98,7 +98,7 @@ var io = require('socket.io').listen(server);
 io.sockets.on('connection', function(socket) {
   // 接続idを確認
   console.log('connected', socket.id);
-  
+
   // chatというイベントを受信した時、送られた内容を全てのクライアントに送信する
   socket.on('chat', function(chat) {
     // 何らかが送られているなら登録する
@@ -114,7 +114,34 @@ io.sockets.on('connection', function(socket) {
       io.emit('chat', chat);
     }
   });
-  
+
+  // 付箋作成イベントを受信した時
+  socket.on('post-it-create', function(postIt) {
+    var newPostIt = new (mongoose.model('PostIt'))();
+    for(var key in postIt) {
+      newPostIt[key] = postIt[key];
+    }
+    console.log(newPostIt);
+    newPostIt.save();
+    io.emit('post-it-create', newPostIt);
+  });
+
+  // 付箋移動イベントを受信した時
+  socket.on('post-it-move', function(postItId, position) {
+    mongoose.model('PostIt').findById(postItId, function(err, postIt) {
+      postIt.position = position;
+      postIt.save(function(err) {
+        if(err) {
+          console.log(err);
+        }
+        else {
+          // 自分以外に付箋移動イベントを送る
+          socket.broadcast.emit('post-it-move', postItId, position);
+        }
+      });
+    });
+  });
+
   // 接続が切れたとき
   socket.on('disconnect', function() {
     console.log('disconnect');
