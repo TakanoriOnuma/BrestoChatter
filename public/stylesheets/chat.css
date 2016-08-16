@@ -25,4 +25,5 @@
   border: solid #bb9 1px;
   background-color: #ffa;
   position: absolute;
+  overflow: hidden;
 }

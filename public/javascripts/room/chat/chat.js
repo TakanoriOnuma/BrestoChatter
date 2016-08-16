@@ -47,8 +47,7 @@ angular.module('myApp', [])
       },
       template: '<div class="my-whiteboard">' +
                 '  <span>ホワイトボード</span>' +
-                '  <my-post-it ng-repeat="postIt in postIts track by $index" pos="postIt.position" post-it-id="postIt._id">' +
-                '    {{postIt.message}}' +
+                '  <my-post-it ng-repeat="postIt in postIts track by $index" post-it="postIt">' +
                 '  </my-post-it>' +
                 '</div>',
       link: function(scope, element, attrs) {
@@ -75,28 +74,56 @@ angular.module('myApp', [])
     return {
       restrict: 'E',
       replace: true,
-      transclude: true,
       scope: {
-        postItId : '=',
-        pos      : '='
+        postIt : '='
       },
-      template: '<div class="my-post-it" ng-transclude></div>',
+      template: '<div class="my-post-it">' +
+                '  <span>{{postIt.message}}</span>' +
+                '</div>',
       link: function(scope, element, attrs, ngModelController) {
+        // 付箋をドラッグ可能にする
         element.draggable({
           containment: 'parent',
           drag: function(event, ui) {
-            scope.pos.x = ui.position.left;
-            scope.pos.y = ui.position.top;
-            scope.$emit('movePostIt', scope.postItId, scope.pos);
+            scope.postIt.position.x = ui.position.left;
+            scope.postIt.position.y = ui.position.top;
+            // 親スコープに付箋が移動したと通知する
+            scope.$emit('movePostIt', scope.postIt._id, scope.postIt.position);
           }
         });
-
-        scope.$watch('pos', function(newValue, oldValue, scope) {
+        // 座標の変化を検知した時、付箋の位置を変更する
+        scope.$watch('postIt.position', function(newValue, oldValue, scope) {
           element.css({
-            top:  scope.pos.y,
-            left: scope.pos.x
+            top:  scope.postIt.position.y,
+            left: scope.postIt.position.x
           })
         }, true);
+
+        // 元々のタグを保持しておく
+        var $span = $('span', element);
+        // クリック時内容を変更できるようにする
+        // (一度ドラッグするとマウスを上げてもクリック扱いにはならない)
+        element.click(function(event) {
+          // spanタグをtextareaタグに置き換える
+          var elem = $('span', element);
+          var $input = $('<textarea>').val(elem.text());
+          $input.css({
+            width: '100%',
+            height: '100%'
+          });
+          elem.replaceWith($input);
+          $input.focus();
+
+          // フォーカスが外れたときはモデルに入力内容を反映させて元に戻す
+          $input.blur(function(event) {
+            scope.$apply(function() {
+              scope.postIt.message = $input.val();
+            });
+            $input.replaceWith($span);
+            // 親スコープにメッセージが変わったことを通知する
+            scope.$emit('changePostItContents', scope.postIt._id, scope.postIt.message);
+          });
+        });
       }
     }
   })
@@ -179,5 +206,20 @@ angular.module('myApp', [])
           postIt[0].position.y = position.y;
         });
       }
-    })
+    });
+
+    // 付箋の内容が変わった時（下からのイベントをそのままsocketに送る）
+    $scope.$on('changePostItContents', function(event, postItId, message) {
+      // 付箋内容変更イベントを送信
+      socket.emit('post-it-contents-change', postItId, message);
+    });
+    // 付箋内容変更イベントを受信した時
+    socket.on('post-it-contents-change', function(postItId, message) {
+      var postIt = $filter('filter')($scope.postIts, { _id: postItId });
+      if(postIt.length === 1) {
+        $timeout(function() {
+          postIt[0].message = message;
+        });
+      }
+    });
   }]);
