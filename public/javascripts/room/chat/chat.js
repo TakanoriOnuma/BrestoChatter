@@ -72,7 +72,9 @@ angular.module('myApp', ['ngSanitize'])
             name  : '削除',
             title : '選択した付箋を削除します。',
             fun   : function() {
-              window.alert('delete!');
+              if(window.confirm('選択した付箋を削除してもよろしいですか？')) {
+                scope.$emit('deletePostIts');
+              }
             }
           }
         ];
@@ -278,5 +280,32 @@ angular.module('myApp', ['ngSanitize'])
           postIt[0].message = message;
         });
       }
+    });
+
+    // 付箋削除イベントを受信したとき
+    $scope.$on('deletePostIts', function(event) {
+      var delPostIts = $filter('filter')($scope.postIts, { selected: true });
+      if(delPostIts.length) {
+        var delPostItIds = [];
+        for(var i = 0; i < delPostIts.length; i++) {
+          delPostItIds.push(delPostIts[i]._id);
+        }
+        // 付箋削除イベントを送信
+        socket.emit('post-it-delete', delPostItIds);
+      }
+    });
+    // 付箋削除イベントを受信した時
+    socket.on('post-it-delete', function(delPostItIds) {
+      $timeout(function() {
+        for(var i = 0; i < delPostItIds.length; i++) {
+          var id = delPostItIds[i];
+          for(var j = 0; j < $scope.postIts.length; j++) {
+            if(id === $scope.postIts[j]._id) {
+              $scope.postIts.splice(j, 1);
+              break;
+            }
+          }
+        }
+      });
     });
   }]);

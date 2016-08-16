@@ -158,6 +158,19 @@ io.sockets.on('connection', function(socket) {
     });
   });
 
+  // 付箋削除イベントを受信した時
+  socket.on('post-it-delete', function(postItIds) {
+    mongoose.model('PostIt').remove({ _id: { $in: postItIds } }, function(err) {
+      if(err) {
+        console.log(err);
+      }
+      else {
+        // 自分も含めて全員に付箋削除イベントを送る
+        io.emit('post-it-delete', postItIds);
+      }
+    });
+  });
+
   // 接続が切れたとき
   socket.on('disconnect', function() {
     console.log('disconnect');
