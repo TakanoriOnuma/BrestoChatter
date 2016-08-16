@@ -1,4 +1,12 @@
-angular.module('myApp', [])
+angular.module('myApp', ['ngSanitize'])
+  .filter('nl2br', function() {
+    return function(value) {
+      if(!angular.isString(value)) {
+        return value;
+      }
+      return value.replace(/\r?\n/g, '<br>');
+    }
+  })
   // チャット一覧を表示するディレクティブ
   .directive('myChatList', function() {
     return {
@@ -45,20 +53,62 @@ angular.module('myApp', [])
       scope: {
         postIts: '='
       },
-      template: '<div class="my-whiteboard">' +
+      template: '<div class="my-whiteboard" ng-click="reset()">' +
                 '  <span>ホワイトボード</span>' +
-                '  <my-post-it ng-repeat="postIt in postIts track by $index" pos="postIt.position" post-it-id="postIt._id">' +
-                '    {{postIt.message}}' +
+                '  <my-post-it ng-repeat="postIt in postIts track by $index" post-it="postIt">' +
                 '  </my-post-it>' +
                 '</div>',
       link: function(scope, element, attrs) {
+        // ホワイトボードの基準座標を取得する
+        var rootPos   = element.position();
+        rootPos.top  -= element.scrollTop();
+        rootPos.left -= element.scrollLeft();
+
+        // コンテキストメニューを作成する
+        var menu = [
+          {
+            name  : '作成',
+            title : '付箋を新しく作ります。',
+            fun   : function(ui) {
+              var pos = ui.menu.position();
+              scope.$parent.createPostIt({
+                message  : '',
+                position : { x: pos.left - rootPos.left, y: pos.top - rootPos.top }
+              });
+            }
+          },
+          {
+            name  : '削除',
+            title : '選択した付箋を削除します。',
+            fun   : function() {
+              if(window.confirm('選択した付箋を削除してもよろしいですか？')) {
+                scope.$emit('deletePostIts');
+              }
+            }
+          }
+        ];
+        element.contextMenu(menu, { triggerOn: 'click', mouseClick: 'right' });
+        // element内でクリックしたときは閉じる（これがないとelement内では閉じてくれない）
+        element.click(function(event) {
+          element.contextMenu('close');
+        });
+        // ul.iw-contextMenuの外に出た時はliの選択を強敵的に外す
+        $('ul.iw-contextMenu').mouseleave(function(event) {
+          $('li', this).removeClass('iw-mSelected');
+        });
+
+        // 全ての付箋を未選択状態にする
+        scope.reset = function() {
+          angular.forEach(scope.postIts, function(postIt, index, arr) {
+            postIt.selected = false;
+          });
+        }
+
+        // ホワイトボード上にチャットのタグを受け取れるようにする
         element.droppable({
           accept: '.my-chat',
           drop: function(event, ui) {
             var message = $('.message', ui.draggable).text();
-            var rootPos   = element.position();
-            rootPos.top  -= element.scrollTop();
-            rootPos.left -= element.scrollLeft();
             var pos = ui.helper.position();
             var postIt = {
               message  : message,
@@ -75,28 +125,70 @@ angular.module('myApp', [])
     return {
       restrict: 'E',
       replace: true,
-      transclude: true,
       scope: {
-        postItId : '=',
-        pos      : '='
+        postIt : '='
       },
-      template: '<div class="my-post-it" ng-transclude></div>',
-      link: function(scope, element, attrs, ngModelController) {
+      template: '<div class="my-post-it" ng-class="{ \'my-post-it-selected\': postIt.selected }">' +
+                '  <span ng-bind-html="postIt.message | nl2br"></span>' +
+                '</div>',
+      link: function(scope, element, attrs) {
+        // モデル値を初期化する
+        scope.postIt.selected = false;
+
+        // 付箋をドラッグ可能にする
         element.draggable({
           containment: 'parent',
           drag: function(event, ui) {
-            scope.pos.x = ui.position.left;
-            scope.pos.y = ui.position.top;
-            scope.$emit('movePostIt', scope.postItId, scope.pos);
+            scope.postIt.position.x = ui.position.left;
+            scope.postIt.position.y = ui.position.top;
+            // 親スコープに付箋が移動したと通知する
+            scope.$emit('movePostIt', scope.postIt._id, scope.postIt.position);
           }
         });
-
-        scope.$watch('pos', function(newValue, oldValue, scope) {
+        // 座標の変化を検知した時、付箋の位置を変更する
+        scope.$watch('postIt.position', function(newValue, oldValue, scope) {
           element.css({
-            top:  scope.pos.y,
-            left: scope.pos.x
+            top:  scope.postIt.position.y,
+            left: scope.postIt.position.x
           })
         }, true);
+
+        // 元々のタグを保持しておく
+        var $span = $('span', element);
+        // クリック時の処理（一度ドラッグするとマウスを上げてもクリック扱いにはならない）
+        element.click(function(event) {
+          event.stopPropagation();
+          // 既に選択されている時、内容を変更できるようにする
+          if(scope.postIt.selected) {
+            // spanタグをtextareaタグに置き換える
+            var elem = $('span', element);
+            var $input = $('<textarea>').val(scope.postIt.message);
+            $input.css({
+              width: '100%',
+              height: '100%'
+            });
+            elem.replaceWith($input);
+            $input.focus();
+
+            // フォーカスが外れたときはモデルに入力内容を反映させて元に戻す
+            $input.blur(function(event) {
+              scope.$apply(function() {
+                scope.postIt.message = $input.val();
+              });
+              $input.replaceWith($span);
+              // 親スコープにメッセージが変わったことを通知する
+              scope.$emit('changePostItContents', scope.postIt._id, scope.postIt.message);
+            });
+          }
+          // 未選択状態なら、選択状態にする
+          else {
+            scope.$apply(function() {
+              // Ctrlキーが入力されていなければ親スコープを借りて選択状態を全てリセットする
+              if(!event.ctrlKey) scope.$parent.reset();
+              scope.postIt.selected = true;
+            });
+          }
+        });
       }
     }
   })
@@ -179,5 +271,47 @@ angular.module('myApp', [])
           postIt[0].position.y = position.y;
         });
       }
-    })
+    });
+
+    // 付箋の内容が変わった時（下からのイベントをそのままsocketに送る）
+    $scope.$on('changePostItContents', function(event, postItId, message) {
+      // 付箋内容変更イベントを送信
+      socket.emit('post-it-contents-change', postItId, message);
+    });
+    // 付箋内容変更イベントを受信した時
+    socket.on('post-it-contents-change', function(postItId, message) {
+      var postIt = $filter('filter')($scope.postIts, { _id: postItId });
+      if(postIt.length === 1) {
+        $timeout(function() {
+          postIt[0].message = message;
+        });
+      }
+    });
+
+    // 付箋削除イベントを受信したとき
+    $scope.$on('deletePostIts', function(event) {
+      var delPostIts = $filter('filter')($scope.postIts, { selected: true });
+      if(delPostIts.length) {
+        var delPostItIds = [];
+        for(var i = 0; i < delPostIts.length; i++) {
+          delPostItIds.push(delPostIts[i]._id);
+        }
+        // 付箋削除イベントを送信
+        socket.emit('post-it-delete', delPostItIds);
+      }
+    });
+    // 付箋削除イベントを受信した時
+    socket.on('post-it-delete', function(delPostItIds) {
+      $timeout(function() {
+        for(var i = 0; i < delPostItIds.length; i++) {
+          var id = delPostItIds[i];
+          for(var j = 0; j < $scope.postIts.length; j++) {
+            if(id === $scope.postIts[j]._id) {
+              $scope.postIts.splice(j, 1);
+              break;
+            }
+          }
+        }
+      });
+    });
   }]);

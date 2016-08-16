@@ -25,4 +25,10 @@
   border: solid #bb9 1px;
   background-color: #ffa;
   position: absolute;
+  overflow: hidden;
+}
+
+.my-post-it-selected {
+  border: solid #ffa 1px;
+  outline: solid #acf 2px;
 }
