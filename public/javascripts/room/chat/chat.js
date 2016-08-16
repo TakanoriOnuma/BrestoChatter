@@ -59,13 +59,22 @@ angular.module('myApp', ['ngSanitize'])
                 '  </my-post-it>' +
                 '</div>',
       link: function(scope, element, attrs) {
+        // ホワイトボードの基準座標を取得する
+        var rootPos   = element.position();
+        rootPos.top  -= element.scrollTop();
+        rootPos.left -= element.scrollLeft();
+
         // コンテキストメニューを作成する
         var menu = [
           {
             name  : '作成',
             title : '付箋を新しく作ります。',
-            fun   : function() {
-              window.alert('create!');
+            fun   : function(ui) {
+              var pos = ui.menu.position();
+              scope.$parent.createPostIt({
+                message  : '',
+                position : { x: pos.left - rootPos.left, y: pos.top - rootPos.top }
+              });
             }
           },
           {
@@ -100,9 +109,6 @@ angular.module('myApp', ['ngSanitize'])
           accept: '.my-chat',
           drop: function(event, ui) {
             var message = $('.message', ui.draggable).text();
-            var rootPos   = element.position();
-            rootPos.top  -= element.scrollTop();
-            rootPos.left -= element.scrollLeft();
             var pos = ui.helper.position();
             var postIt = {
               message  : message,
