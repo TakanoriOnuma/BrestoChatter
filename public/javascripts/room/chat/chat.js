@@ -1,4 +1,12 @@
-angular.module('myApp', [])
+angular.module('myApp', ['ngSanitize'])
+  .filter('nl2br', function() {
+    return function(value) {
+      if(!angular.isString(value)) {
+        return value;
+      }
+      return value.replace(/\r?\n/g, '<br>');
+    }
+  })
   // チャット一覧を表示するディレクティブ
   .directive('myChatList', function() {
     return {
@@ -78,7 +86,7 @@ angular.module('myApp', [])
         postIt : '='
       },
       template: '<div class="my-post-it">' +
-                '  <span>{{postIt.message}}</span>' +
+                '  <span ng-bind-html="postIt.message | nl2br"></span>' +
                 '</div>',
       link: function(scope, element, attrs, ngModelController) {
         // 付箋をドラッグ可能にする
@@ -106,7 +114,7 @@ angular.module('myApp', [])
         element.click(function(event) {
           // spanタグをtextareaタグに置き換える
           var elem = $('span', element);
-          var $input = $('<textarea>').val(elem.text());
+          var $input = $('<textarea>').val(scope.postIt.message);
           $input.css({
             width: '100%',
             height: '100%'
