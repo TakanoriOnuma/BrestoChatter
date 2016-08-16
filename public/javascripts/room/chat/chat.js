@@ -59,6 +59,33 @@ angular.module('myApp', ['ngSanitize'])
                 '  </my-post-it>' +
                 '</div>',
       link: function(scope, element, attrs) {
+        // コンテキストメニューを作成する
+        var menu = [
+          {
+            name  : '作成',
+            title : '付箋を新しく作ります。',
+            fun   : function() {
+              window.alert('create!');
+            }
+          },
+          {
+            name  : '削除',
+            title : '選択した付箋を削除します。',
+            fun   : function() {
+              window.alert('delete!');
+            }
+          }
+        ];
+        element.contextMenu(menu, { triggerOn: 'click', mouseClick: 'right' });
+        // element内でクリックしたときは閉じる（これがないとelement内では閉じてくれない）
+        element.click(function(event) {
+          element.contextMenu('close');
+        });
+        // ul.iw-contextMenuの外に出た時はliの選択を強敵的に外す
+        $('ul.iw-contextMenu').mouseleave(function(event) {
+          $('li', this).removeClass('iw-mSelected');
+        });
+
         element.droppable({
           accept: '.my-chat',
           drop: function(event, ui) {
@@ -88,7 +115,7 @@ angular.module('myApp', ['ngSanitize'])
       template: '<div class="my-post-it">' +
                 '  <span ng-bind-html="postIt.message | nl2br"></span>' +
                 '</div>',
-      link: function(scope, element, attrs, ngModelController) {
+      link: function(scope, element, attrs) {
         // 付箋をドラッグ可能にする
         element.draggable({
           containment: 'parent',
