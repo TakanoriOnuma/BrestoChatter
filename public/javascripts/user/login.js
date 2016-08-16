@@ -20,7 +20,12 @@ angular.module('myApp', [])
               window.location.href = '/';
             }
             else {
-              $scope.errors.push('メールアドレスかパスワードを間違えています。');
+              if(data === '') {
+                $scope.errors.push('このメールアドレスは登録されていません。');
+              }
+              else {
+                $scope.errors.push('メールアドレスかパスワードを間違えています。');
+              }
             }
           });
       }

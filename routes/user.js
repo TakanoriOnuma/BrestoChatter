@@ -10,12 +10,17 @@ router.get('/login', function(req, res, next) {
 // ログイン
 router.post('/login', function(req, res, next) {
   mongoose.model('User').findOne({email: req.body.email}, function(err, user) {
-    if(user.password === req.body.password) {
-      req.session.user = user;
-      res.send(true);
+    if(user) {
+      if(user.password === req.body.password) {
+        req.session.user = user;
+        res.send(true);
+      }
+      else {
+        res.send(false);
+      }
     }
     else {
-      res.send(false);
+      res.send('');
     }
   });
 });
