@@ -53,7 +53,7 @@ angular.module('myApp', ['ngSanitize'])
       scope: {
         postIts: '='
       },
-      template: '<div class="my-whiteboard">' +
+      template: '<div class="my-whiteboard" ng-click="reset()">' +
                 '  <span>ホワイトボード</span>' +
                 '  <my-post-it ng-repeat="postIt in postIts track by $index" post-it="postIt">' +
                 '  </my-post-it>' +
@@ -86,6 +86,14 @@ angular.module('myApp', ['ngSanitize'])
           $('li', this).removeClass('iw-mSelected');
         });
 
+        // 全ての付箋を未選択状態にする
+        scope.reset = function() {
+          angular.forEach(scope.postIts, function(postIt, index, arr) {
+            postIt.selected = false;
+          });
+        }
+
+        // ホワイトボード上にチャットのタグを受け取れるようにする
         element.droppable({
           accept: '.my-chat',
           drop: function(event, ui) {
@@ -112,10 +120,13 @@ angular.module('myApp', ['ngSanitize'])
       scope: {
         postIt : '='
       },
-      template: '<div class="my-post-it">' +
+      template: '<div class="my-post-it" ng-class="{ \'my-post-it-selected\': postIt.selected }">' +
                 '  <span ng-bind-html="postIt.message | nl2br"></span>' +
                 '</div>',
       link: function(scope, element, attrs) {
+        // モデル値を初期化する
+        scope.postIt.selected = false;
+
         // 付箋をドラッグ可能にする
         element.draggable({
           containment: 'parent',
@@ -136,28 +147,39 @@ angular.module('myApp', ['ngSanitize'])
 
         // 元々のタグを保持しておく
         var $span = $('span', element);
-        // クリック時内容を変更できるようにする
-        // (一度ドラッグするとマウスを上げてもクリック扱いにはならない)
+        // クリック時の処理（一度ドラッグするとマウスを上げてもクリック扱いにはならない）
         element.click(function(event) {
-          // spanタグをtextareaタグに置き換える
-          var elem = $('span', element);
-          var $input = $('<textarea>').val(scope.postIt.message);
-          $input.css({
-            width: '100%',
-            height: '100%'
-          });
-          elem.replaceWith($input);
-          $input.focus();
-
-          // フォーカスが外れたときはモデルに入力内容を反映させて元に戻す
-          $input.blur(function(event) {
-            scope.$apply(function() {
-              scope.postIt.message = $input.val();
+          event.stopPropagation();
+          // 既に選択されている時、内容を変更できるようにする
+          if(scope.postIt.selected) {
+            // spanタグをtextareaタグに置き換える
+            var elem = $('span', element);
+            var $input = $('<textarea>').val(scope.postIt.message);
+            $input.css({
+              width: '100%',
+              height: '100%'
             });
-            $input.replaceWith($span);
-            // 親スコープにメッセージが変わったことを通知する
-            scope.$emit('changePostItContents', scope.postIt._id, scope.postIt.message);
-          });
+            elem.replaceWith($input);
+            $input.focus();
+
+            // フォーカスが外れたときはモデルに入力内容を反映させて元に戻す
+            $input.blur(function(event) {
+              scope.$apply(function() {
+                scope.postIt.message = $input.val();
+              });
+              $input.replaceWith($span);
+              // 親スコープにメッセージが変わったことを通知する
+              scope.$emit('changePostItContents', scope.postIt._id, scope.postIt.message);
+            });
+          }
+          // 未選択状態なら、選択状態にする
+          else {
+            scope.$apply(function() {
+              // Ctrlキーが入力されていなければ親スコープを借りて選択状態を全てリセットする
+              if(!event.ctrlKey) scope.$parent.reset();
+              scope.postIt.selected = true;
+            });
+          }
         });
       }
     }
