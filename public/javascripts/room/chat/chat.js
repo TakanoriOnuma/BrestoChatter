@@ -206,27 +206,28 @@ angular.module('myApp', ['ngSanitize'])
       return dataList;
     }
   }])
-  .controller('MyController', ['$scope', '$timeout', '$filter', 'ChatService',
-  function($scope, $timeout, $filter, ChatService) {
-    // Socketの作成
-    var socket = io();
-
+  // socket.ioのシングルトンラッパー
+  .factory('WebSocket', function() {
+    return io();
+  })
+  .controller('MyController', ['$scope', '$timeout', '$filter', 'ChatService', 'WebSocket',
+  function($scope, $timeout, $filter, ChatService, WebSocket) {
     // チャットリストを取得する
     $scope.chats = ChatService.getDataList('./chats');
 
     // 参加イベントを通知する（タグに直接アクセスした方が早い）
-    socket.emit('join', $('#roomId').val(), $('#userName').val());
+    WebSocket.emit('join', $('#roomId').val(), $('#userName').val());
     // 参加イベントを受信した時
-    socket.on('join', function(userName) {
+    WebSocket.on('join', function(userName) {
       console.log(userName + ' entered.');
     });
     // 退出イベントを受信した時
-    socket.on('leave', function(userName) {
+    WebSocket.on('leave', function(userName) {
       console.log(userName + ' leaved.');
     });
 
     // chatというイベントを受信した時
-    socket.on('chat', function(chat) {
+    WebSocket.on('chat', function(chat) {
       $timeout(function() {
         $scope.chats.push(chat);
       });
@@ -238,7 +239,7 @@ angular.module('myApp', ['ngSanitize'])
         return;
       }
       // chatイベントを送信する
-      socket.emit('chat', $scope.chat.message);
+      WebSocket.emit('chat', $scope.chat.message);
       $scope.chat.message = '';
     };
 
@@ -247,11 +248,11 @@ angular.module('myApp', ['ngSanitize'])
     // 付箋の作成
     $scope.createPostIt = function(postIt) {
       // post-it-createイベントを送信する
-      socket.emit('post-it-create', postIt);
+      WebSocket.emit('post-it-create', postIt);
     };
 
     // post-it-createというイベントを受信した時
-    socket.on('post-it-create', function(postIt) {
+    WebSocket.on('post-it-create', function(postIt) {
       console.log('recieve:', postIt);
       $timeout(function() {
         $scope.postIts.push(postIt);
@@ -261,10 +262,10 @@ angular.module('myApp', ['ngSanitize'])
     // 付箋の移動（下からのイベントをそのままsocketに送る）
     $scope.$on('movePostIt', function(event, postItId, position) {
       // post-it-moveイベントを送信する
-      socket.emit('post-it-move', postItId, position);
+      WebSocket.emit('post-it-move', postItId, position);
     });
     // 付箋移動イベントを受信した時
-    socket.on('post-it-move', function(postItId, position) {
+    WebSocket.on('post-it-move', function(postItId, position) {
       var postIt = $filter('filter')($scope.postIts, { _id: postItId });
       if(postIt.length === 1) {
         $timeout(function() {
@@ -277,10 +278,10 @@ angular.module('myApp', ['ngSanitize'])
     // 付箋の内容が変わった時（下からのイベントをそのままsocketに送る）
     $scope.$on('changePostItContents', function(event, postItId, message) {
       // 付箋内容変更イベントを送信
-      socket.emit('post-it-contents-change', postItId, message);
+      WebSocket.emit('post-it-contents-change', postItId, message);
     });
     // 付箋内容変更イベントを受信した時
-    socket.on('post-it-contents-change', function(postItId, message) {
+    WebSocket.on('post-it-contents-change', function(postItId, message) {
       var postIt = $filter('filter')($scope.postIts, { _id: postItId });
       if(postIt.length === 1) {
         $timeout(function() {
@@ -298,11 +299,11 @@ angular.module('myApp', ['ngSanitize'])
           delPostItIds.push(delPostIts[i]._id);
         }
         // 付箋削除イベントを送信
-        socket.emit('post-it-delete', delPostItIds);
+        WebSocket.emit('post-it-delete', delPostItIds);
       }
     });
     // 付箋削除イベントを受信した時
-    socket.on('post-it-delete', function(delPostItIds) {
+    WebSocket.on('post-it-delete', function(delPostItIds) {
       $timeout(function() {
         for(var i = 0; i < delPostItIds.length; i++) {
           var id = delPostItIds[i];
