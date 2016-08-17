@@ -214,6 +214,17 @@ angular.module('myApp', ['ngSanitize'])
     // チャットリストを取得する
     $scope.chats = ChatService.getDataList('./chats');
 
+    // 参加イベントを通知する（タグに直接アクセスした方が早い）
+    socket.emit('join', $('#roomId').val(), $('#userName').val());
+    // 参加イベントを受信した時
+    socket.on('join', function(userName) {
+      console.log(userName + ' entered.');
+    });
+    // 退出イベントを受信した時
+    socket.on('leave', function(userName) {
+      console.log(userName + ' leaved.');
+    });
+
     // chatというイベントを受信した時
     socket.on('chat', function(chat) {
       console.log('recieve:', chat);

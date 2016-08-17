@@ -95,9 +95,34 @@ var mongoose = require('mongoose');
 // 受信側のSocketの用意
 var io = require('socket.io').listen(server);
 
+// 参加者
+var users = {};
 io.sockets.on('connection', function(socket) {
   // 接続idを確認
   console.log('connected', socket.id);
+
+  // 部屋に参加
+  socket.on('join', function(roomId, userName) {
+    users[socket.id] = {
+      roomId   : roomId,
+      userName : userName
+    };
+    // roomIdのグループに登録する
+    socket.join(users[socket.id].roomId);
+    // roomIdのグループ全体に参加イベントを通知する
+    io.to(users[socket.id].roomId).emit('join', users[socket.id].userName);
+  });
+  // 部屋から退出（接続が切れたとき）
+  socket.on('disconnect', function() {
+    // 接続情報が残っていたら
+    // （再接続した時'join'イベントを投げないと接続情報が無い）
+    if(users[socket.id]) {
+      // 自分以外のroomIdグループの人に退出イベントを通知する
+      socket.broadcast.to(users[socket.id].roomId).emit('leave', users[socket.id].userName);
+      delete users[socket.id];
+    }
+    console.log('now connections:', users);
+  });
 
   // chatというイベントを受信した時、送られた内容を全てのクライアントに送信する
   socket.on('chat', function(chat) {
@@ -169,10 +194,5 @@ io.sockets.on('connection', function(socket) {
         io.emit('post-it-delete', postItIds);
       }
     });
-  });
-
-  // 接続が切れたとき
-  socket.on('disconnect', function() {
-    console.log('disconnect');
   });
 });
