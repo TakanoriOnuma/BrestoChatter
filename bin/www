@@ -95,39 +95,70 @@ var mongoose = require('mongoose');
 // 受信側のSocketの用意
 var io = require('socket.io').listen(server);
 
+// 参加者
+var users = {};
 io.sockets.on('connection', function(socket) {
   // 接続idを確認
   console.log('connected', socket.id);
 
+  // 部屋に参加
+  socket.on('join', function(roomId, userName) {
+    users[socket.id] = {
+      roomId   : roomId,
+      userName : userName
+    };
+    // roomIdのグループに登録する
+    socket.join(users[socket.id].roomId);
+    // roomIdのグループ全体に参加イベントを通知する
+    io.to(users[socket.id].roomId).emit('join', users[socket.id].userName);
+  });
+  // 部屋から退出（接続が切れたとき）
+  socket.on('disconnect', function() {
+    // 参加情報がなければ処理をしない
+    if(!users[socket.id]) return;
+
+    // 自分以外のroomIdグループの人に退出イベントを通知する
+    socket.broadcast.to(users[socket.id].roomId).emit('leave', users[socket.id].userName);
+    delete users[socket.id];
+    console.log('now connections:', users);
+  });
+
   // chatというイベントを受信した時、送られた内容を全てのクライアントに送信する
-  socket.on('chat', function(chat) {
-    // 何らかが送られているなら登録する
-    if(chat.message) {
-      var newChat = new (mongoose.model('Chat'))();
-      for(var key in chat) {
-        newChat[key] = chat[key];
-      }
-      console.log(newChat);
-      newChat.save();
-      // 登録日を追加して全体に送る
-      chat.createdDate = newChat.createdDate;
-      io.emit('chat', chat);
-    }
+  socket.on('chat', function(message) {
+    // 参加情報がなければ処理をしない
+    if(!users[socket.id]) return;
+
+    var newChat = new (mongoose.model('Chat'))();
+    newChat.message = message;
+    // 接続情報を元に必要項目を代入
+    newChat.roomId   = users[socket.id].roomId;
+    newChat.userName = users[socket.id].userName;
+    console.log(newChat);
+    newChat.save();
+    // roomIdグループ全体にチャットイベントを通知する
+    io.to(users[socket.id].roomId).emit('chat', newChat);
   });
 
   // 付箋作成イベントを受信した時
   socket.on('post-it-create', function(postIt) {
+    // 参加情報がなければ処理をしない
+    if(!users[socket.id]) return;
+
     var newPostIt = new (mongoose.model('PostIt'))();
+    newPostIt.roomId = users[socket.id].roomId;
     for(var key in postIt) {
       newPostIt[key] = postIt[key];
     }
     console.log(newPostIt);
     newPostIt.save();
-    io.emit('post-it-create', newPostIt);
+    io.to(users[socket.id].roomId).emit('post-it-create', newPostIt);
   });
 
   // 付箋移動イベントを受信した時
   socket.on('post-it-move', function(postItId, position) {
+    // 参加情報がなければ処理をしない
+    if(!users[socket.id]) return;
+
     mongoose.model('PostIt').findById(postItId, function(err, postIt) {
       postIt.position = position;
       postIt.save(function(err) {
@@ -136,7 +167,7 @@ io.sockets.on('connection', function(socket) {
         }
         else {
           // 自分以外に付箋移動イベントを送る
-          socket.broadcast.emit('post-it-move', postItId, position);
+          socket.broadcast.to(users[socket.id].roomId).emit('post-it-move', postItId, position);
         }
       });
     });
@@ -144,6 +175,9 @@ io.sockets.on('connection', function(socket) {
 
   // 付箋内容変更イベントを受信した時
   socket.on('post-it-contents-change', function(postItId, message) {
+    // 参加情報がなければ処理をしない
+    if(!users[socket.id]) return;
+
     mongoose.model('PostIt').findById(postItId, function(err, postIt) {
       postIt.message = message;
       postIt.save(function(err) {
@@ -152,7 +186,7 @@ io.sockets.on('connection', function(socket) {
         }
         else {
           // 自分以外に付箋内容変更イベントを送る
-          socket.broadcast.emit('post-it-contents-change', postItId, message);
+          socket.broadcast.to(users[socket.id].roomId).emit('post-it-contents-change', postItId, message);
         }
       });
     });
@@ -160,19 +194,17 @@ io.sockets.on('connection', function(socket) {
 
   // 付箋削除イベントを受信した時
   socket.on('post-it-delete', function(postItIds) {
+    // 参加情報がなければ処理をしない
+    if(!users[socket.id]) return;
+
     mongoose.model('PostIt').remove({ _id: { $in: postItIds } }, function(err) {
       if(err) {
         console.log(err);
       }
       else {
         // 自分も含めて全員に付箋削除イベントを送る
-        io.emit('post-it-delete', postItIds);
+        io.to(users[socket.id].roomId).emit('post-it-delete', postItIds);
       }
     });
-  });
-
-  // 接続が切れたとき
-  socket.on('disconnect', function() {
-    console.log('disconnect');
   });
 });
