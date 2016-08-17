@@ -14,8 +14,8 @@ block content
           label(for='message') 内容：
           input#message(name='message', type='text', ng-model='chat.message', ng-init="chat.message=''")
           input(type='submit', value='送信')
-          input#roomId(type='hidden', value='#{roomId}', ng-model='chat.roomId', ng-init="chat.roomId='#{roomId}'")
-          input#userName(type='hidden', value='#{userName}', ng-model='chat.userName', ng-init="chat.userName='#{userName}'")
+          input#roomId(type='hidden', value='#{roomId}')
+          input#userName(type='hidden', value='#{userName}')
       td メンバーリストとか
 
 block stylesheets

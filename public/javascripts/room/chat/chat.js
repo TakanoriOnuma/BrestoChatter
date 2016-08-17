@@ -227,13 +227,9 @@ angular.module('myApp', ['ngSanitize'])
 
     // chatというイベントを受信した時
     socket.on('chat', function(chat) {
-      console.log('recieve:', chat);
-      // 同じroomIdなら反映させる
-      if(chat.roomId === $scope.chat.roomId) {
-        $timeout(function() {
-          $scope.chats.push(chat);
-        });
-      }
+      $timeout(function() {
+        $scope.chats.push(chat);
+      });
     });
 
     // submitイベント時の処理
@@ -241,10 +237,8 @@ angular.module('myApp', ['ngSanitize'])
       if($scope.chat.message === '') {
         return;
       }
-
-      console.log($scope.chat);
       // chatイベントを送信する
-      socket.emit('chat', $scope.chat);
+      socket.emit('chat', $scope.chat.message);
       $scope.chat.message = '';
     };
 
@@ -252,7 +246,6 @@ angular.module('myApp', ['ngSanitize'])
     $scope.postIts = ChatService.getDataList('./post-its');
     // 付箋の作成
     $scope.createPostIt = function(postIt) {
-      postIt.roomId = $scope.chat.roomId;
       // post-it-createイベントを送信する
       socket.emit('post-it-create', postIt);
     };
@@ -260,12 +253,9 @@ angular.module('myApp', ['ngSanitize'])
     // post-it-createというイベントを受信した時
     socket.on('post-it-create', function(postIt) {
       console.log('recieve:', postIt);
-      // 同じroomIdなら反映させる
-      if(postIt.roomId === $scope.chat.roomId) {
-        $timeout(function() {
-          $scope.postIts.push(postIt);
-        });
-      }
+      $timeout(function() {
+        $scope.postIts.push(postIt);
+      });
     });
 
     // 付箋の移動（下からのイベントをそのままsocketに送る）

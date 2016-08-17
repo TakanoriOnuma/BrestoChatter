@@ -125,30 +125,28 @@ io.sockets.on('connection', function(socket) {
   });
 
   // chatというイベントを受信した時、送られた内容を全てのクライアントに送信する
-  socket.on('chat', function(chat) {
-    // 何らかが送られているなら登録する
-    if(chat.message) {
-      var newChat = new (mongoose.model('Chat'))();
-      for(var key in chat) {
-        newChat[key] = chat[key];
-      }
-      console.log(newChat);
-      newChat.save();
-      // 登録日を追加して全体に送る
-      chat.createdDate = newChat.createdDate;
-      io.emit('chat', chat);
-    }
+  socket.on('chat', function(message) {
+    var newChat = new (mongoose.model('Chat'))();
+    newChat.message = message;
+    // 接続情報を元に必要項目を代入
+    newChat.roomId   = users[socket.id].roomId;
+    newChat.userName = users[socket.id].userName;
+    console.log(newChat);
+    newChat.save();
+    // roomIdグループ全体にチャットイベントを通知する
+    io.to(users[socket.id].roomId).emit('chat', newChat);
   });
 
   // 付箋作成イベントを受信した時
   socket.on('post-it-create', function(postIt) {
     var newPostIt = new (mongoose.model('PostIt'))();
+    newPostIt.roomId = users[socket.id].roomId;
     for(var key in postIt) {
       newPostIt[key] = postIt[key];
     }
     console.log(newPostIt);
     newPostIt.save();
-    io.emit('post-it-create', newPostIt);
+    io.to(users[socket.id].roomId).emit('post-it-create', newPostIt);
   });
 
   // 付箋移動イベントを受信した時
@@ -161,7 +159,7 @@ io.sockets.on('connection', function(socket) {
         }
         else {
           // 自分以外に付箋移動イベントを送る
-          socket.broadcast.emit('post-it-move', postItId, position);
+          socket.broadcast.to(users[socket.id].roomId).emit('post-it-move', postItId, position);
         }
       });
     });
@@ -177,7 +175,7 @@ io.sockets.on('connection', function(socket) {
         }
         else {
           // 自分以外に付箋内容変更イベントを送る
-          socket.broadcast.emit('post-it-contents-change', postItId, message);
+          socket.broadcast.to(users[socket.id].roomId).emit('post-it-contents-change', postItId, message);
         }
       });
     });
@@ -191,7 +189,7 @@ io.sockets.on('connection', function(socket) {
       }
       else {
         // 自分も含めて全員に付箋削除イベントを送る
-        io.emit('post-it-delete', postItIds);
+        io.to(users[socket.id].roomId).emit('post-it-delete', postItIds);
       }
     });
   });
