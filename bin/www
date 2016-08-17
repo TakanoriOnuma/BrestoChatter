@@ -114,18 +114,20 @@ io.sockets.on('connection', function(socket) {
   });
   // 部屋から退出（接続が切れたとき）
   socket.on('disconnect', function() {
-    // 接続情報が残っていたら
-    // （再接続した時'join'イベントを投げないと接続情報が無い）
-    if(users[socket.id]) {
-      // 自分以外のroomIdグループの人に退出イベントを通知する
-      socket.broadcast.to(users[socket.id].roomId).emit('leave', users[socket.id].userName);
-      delete users[socket.id];
-    }
+    // 参加情報がなければ処理をしない
+    if(!users[socket.id]) return;
+
+    // 自分以外のroomIdグループの人に退出イベントを通知する
+    socket.broadcast.to(users[socket.id].roomId).emit('leave', users[socket.id].userName);
+    delete users[socket.id];
     console.log('now connections:', users);
   });
 
   // chatというイベントを受信した時、送られた内容を全てのクライアントに送信する
   socket.on('chat', function(message) {
+    // 参加情報がなければ処理をしない
+    if(!users[socket.id]) return;
+
     var newChat = new (mongoose.model('Chat'))();
     newChat.message = message;
     // 接続情報を元に必要項目を代入
@@ -139,6 +141,9 @@ io.sockets.on('connection', function(socket) {
 
   // 付箋作成イベントを受信した時
   socket.on('post-it-create', function(postIt) {
+    // 参加情報がなければ処理をしない
+    if(!users[socket.id]) return;
+
     var newPostIt = new (mongoose.model('PostIt'))();
     newPostIt.roomId = users[socket.id].roomId;
     for(var key in postIt) {
@@ -151,6 +156,9 @@ io.sockets.on('connection', function(socket) {
 
   // 付箋移動イベントを受信した時
   socket.on('post-it-move', function(postItId, position) {
+    // 参加情報がなければ処理をしない
+    if(!users[socket.id]) return;
+
     mongoose.model('PostIt').findById(postItId, function(err, postIt) {
       postIt.position = position;
       postIt.save(function(err) {
@@ -167,6 +175,9 @@ io.sockets.on('connection', function(socket) {
 
   // 付箋内容変更イベントを受信した時
   socket.on('post-it-contents-change', function(postItId, message) {
+    // 参加情報がなければ処理をしない
+    if(!users[socket.id]) return;
+
     mongoose.model('PostIt').findById(postItId, function(err, postIt) {
       postIt.message = message;
       postIt.save(function(err) {
@@ -183,6 +194,9 @@ io.sockets.on('connection', function(socket) {
 
   // 付箋削除イベントを受信した時
   socket.on('post-it-delete', function(postItIds) {
+    // 参加情報がなければ処理をしない
+    if(!users[socket.id]) return;
+
     mongoose.model('PostIt').remove({ _id: { $in: postItIds } }, function(err) {
       if(err) {
         console.log(err);
