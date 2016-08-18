@@ -1,4 +1,4 @@
-angular.module('myApp', ['ngSanitize'])
+angular.module('myApp', ['ngSanitize', 'myWidget'])
   // 改行を<br>に変換するフィルター
   .filter('nl2br', function() {
     return function(value) {

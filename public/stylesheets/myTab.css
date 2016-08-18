@@ -1,0 +1,33 @@
+.container > .panel {
+  border: 1px #ccc;
+  border-style: solid;
+  border-radius: 0px 0px 4px 4px ;
+  float: left;
+  width: 100%;
+}
+
+.container > ul {
+  padding-left: 0;
+}
+
+.container > ul li {
+  list-style-type: none;
+  background-color: #eee;
+  border: 1px #ccc;
+  border-style: solid solid none;
+  border-radius: 4px 4px 0 0;
+  text-decoration: none;
+  float: left;
+  text-align: center;
+  width: 100px;
+}
+
+.container > ul li.selected {
+  color: #fff;
+  background-color: #000;
+}
+
+.container > ul li:hover {
+  cursor: pointer;
+  background-color: #0f0;
+}

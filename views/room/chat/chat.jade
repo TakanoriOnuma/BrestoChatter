@@ -4,11 +4,11 @@ block content
   table(border='1', width='100%')
     tr
       td(colspan='2') スケジュール
-    tr
-      td(colspan='2', height='300px')
+    tr(height='300px')
+      td(colspan='2')
         my-whiteboard(post-its='postIts')
-    tr
-      td
+    tr(height='300px')
+      td(width='60%', valign='top')
         my-chat-list(chats='chats')
         form(ng-submit='sendMessage()')
           label(for='message') 内容：
@@ -16,14 +16,21 @@ block content
           input(type='submit', value='送信')
           input#roomId(type='hidden', value='#{roomId}')
           input#userName(type='hidden', value='#{userName}')
-      td メンバーリストとか
+      td(width='40%', valign='top')
+        my-tab-panel
+          my-tab(title='メンバーリスト')
+            span メンバーリスト
+          my-tab(title='アイデア促進')
+            span アイデア促進
 
 block stylesheets
   link(rel='stylesheet', href='/stylesheets/chat.css')
   link(rel='stylesheet', href='/stylesheets/contextMenu.css')
+  link(rel='stylesheet', href='/stylesheets/myTab.css')
 
 block scripts
   script(src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular-sanitize.min.js")
   script(src='/socket.io/socket.io.js')
   script(src='/javascripts/contextMenu.js')
+  script(src='/javascripts/modules/myWidget.js')
   script(src='/javascripts/room/chat/chat.js')
