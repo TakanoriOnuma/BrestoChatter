@@ -251,6 +251,12 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         });
       });
     });
+    // メンバーリストを受信した時
+    WebSocket.on('members', function(members) {
+      $timeout(function() {
+        angular.extend($scope.members, members);
+      });
+    });
     // 退出イベントを受信した時
     WebSocket.on('leave', function(userName) {
       console.log(userName + ' left.');
