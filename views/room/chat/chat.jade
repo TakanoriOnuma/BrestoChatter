@@ -22,7 +22,8 @@ block content
       td(width='40%', valign='top')
         uib-tabset
           uib-tab(index='0', heading='メンバーリスト')
-            span メンバーリスト
+            ul
+              li(ng-repeat='member in members') {{member.userName}}
           uib-tab(index='1', heading='アイデア促進')
             span アイデア促進
     // 通信用hiddenデータ

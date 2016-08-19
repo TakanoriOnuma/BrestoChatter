@@ -240,13 +240,28 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
 
     // 参加イベントを通知する
     WebSocket.emit('join', $scope.chat.roomId, $scope.chat.userName);
+    // メンバーリスト
+    $scope.members = [];
     // 参加イベントを受信した時
     WebSocket.on('join', function(userName) {
       console.log(userName + ' entered.');
+      $timeout(function() {
+        $scope.members.push({
+          userName: userName
+        });
+      });
     });
     // 退出イベントを受信した時
     WebSocket.on('leave', function(userName) {
       console.log(userName + ' left.');
+      $timeout(function() {
+        for(var i = 0; i < $scope.members.length; i++) {
+          if($scope.members[i].userName === userName) {
+            $scope.members.splice(i, 1);
+            break;
+          }
+        }
+      });
     });
 
     // チャットリストを取得する
