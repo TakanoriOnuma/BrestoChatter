@@ -1,4 +1,4 @@
-angular.module('myApp', ['ngSanitize'])
+angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   // 改行を<br>に変換するフィルター
   .filter('nl2br', function() {
     return function(value) {
@@ -231,20 +231,26 @@ angular.module('myApp', ['ngSanitize'])
   // メインコントローラー
   .controller('MyController', ['$scope', '$timeout', '$filter', 'ChatService', 'WebSocket',
   function($scope, $timeout, $filter, ChatService, WebSocket) {
-    // チャットリストを取得する
-    $scope.chats = ChatService.getDataList('./chats');
+    // 参照できるようにあらかじめ初期化する
+    $scope.chat = {
+      roomId:   $('#roomId').val(),
+      userName: $('#userName').val(),
+      message:  ''
+    };
 
-    // 参加イベントを通知する（タグに直接アクセスした方が早い）
-    WebSocket.emit('join', $('#roomId').val(), $('#userName').val());
+    // 参加イベントを通知する
+    WebSocket.emit('join', $scope.chat.roomId, $scope.chat.userName);
     // 参加イベントを受信した時
     WebSocket.on('join', function(userName) {
       console.log(userName + ' entered.');
     });
     // 退出イベントを受信した時
     WebSocket.on('leave', function(userName) {
-      console.log(userName + ' leaved.');
+      console.log(userName + ' left.');
     });
 
+    // チャットリストを取得する
+    $scope.chats = ChatService.getDataList('./chats');
     // chatというイベントを受信した時
     WebSocket.on('chat', function(chat) {
       $timeout(function() {
