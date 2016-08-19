@@ -5,25 +5,40 @@ block content
     tr
       td(colspan='2') スケジュール
     tr
+      //- こっちにheightを書かないとブラウザの互換性を保てない（Chromeとfirefoxにおいては）
       td(colspan='2', height='300px')
         my-whiteboard(post-its='postIts')
-    tr
-      td
-        my-chat-list(chats='chats')
-        form(ng-submit='sendMessage()')
-          label(for='message') 内容：
-          input#message(name='message', type='text', ng-model='chat.message', ng-init="chat.message=''")
-          input(type='submit', value='送信')
-          input#roomId(type='hidden', value='#{roomId}')
-          input#userName(type='hidden', value='#{userName}')
-      td メンバーリストとか
+    tr(height='300px')
+      td(width='60%', valign='top')
+        uib-tabset
+          uib-tab(index='0', heading='チャット')
+            my-chat-list(chats='chats')
+            form(ng-submit='sendMessage()')
+              label(for='message') 内容：
+              input#message(name='message', type='text', ng-model='chat.message')
+              input(type='submit', value='送信')
+          uib-tab(index='1', heading='ログ')
+            span 音声通話などのログ
+      td(width='40%', valign='top')
+        uib-tabset
+          uib-tab(index='0', heading='メンバーリスト')
+            ul(ng-cloak)
+              li(ng-repeat='member in members | orderBy: "userName"') {{member.userName}}
+          uib-tab(index='1', heading='アイデア促進')
+            span アイデア促進
+    // 通信用hiddenデータ
+    input#roomId(type='hidden', value='#{roomId}')
+    input#userName(type='hidden', value='#{userName}')
 
 block stylesheets
-  link(rel='stylesheet', href='/stylesheets/chat.css')
+  link(rel='stylesheet', href='https://netdna.bootstrapcdn.com/bootstrap/latest/css/bootstrap.min.css')
   link(rel='stylesheet', href='/stylesheets/contextMenu.css')
+  link(rel='stylesheet', href='/stylesheets/chat.css')
 
 block scripts
-  script(src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular-sanitize.min.js")
+  script(src='https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/2.0.2/ui-bootstrap.min.js')
+  script(src='https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/2.0.2/ui-bootstrap-tpls.min.js')
+  script(src='https://ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular-sanitize.min.js')
   script(src='/socket.io/socket.io.js')
   script(src='/javascripts/contextMenu.js')
   script(src='/javascripts/room/chat/chat.js')
