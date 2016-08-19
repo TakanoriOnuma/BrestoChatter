@@ -109,8 +109,19 @@ io.sockets.on('connection', function(socket) {
     };
     // roomIdのグループに登録する
     socket.join(users[socket.id].roomId);
-    // roomIdのグループ全体に参加イベントを通知する
-    io.to(users[socket.id].roomId).emit('join', users[socket.id].userName);
+    // 自分以外のroomIdのグループ全体に参加イベントを通知する
+    socket.broadcast.to(users[socket.id].roomId).emit('join', users[socket.id].userName);
+    // 自分に対してはroomIdのグループで今参加しているメンバーを通知する
+    var members = [];
+    for(var id in users) {
+      if(users[id].roomId === users[socket.id].roomId) {
+        members.push({
+          userName: users[id].userName
+        });
+      }
+    }
+    console.log(members);
+    socket.emit('members', members);
   });
   // 部屋から退出（接続が切れたとき）
   socket.on('disconnect', function() {

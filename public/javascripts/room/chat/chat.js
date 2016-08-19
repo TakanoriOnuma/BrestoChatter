@@ -1,4 +1,4 @@
-angular.module('myApp', ['ngSanitize'])
+angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   // 改行を<br>に変換するフィルター
   .filter('nl2br', function() {
     return function(value) {
@@ -231,20 +231,47 @@ angular.module('myApp', ['ngSanitize'])
   // メインコントローラー
   .controller('MyController', ['$scope', '$timeout', '$filter', 'ChatService', 'WebSocket',
   function($scope, $timeout, $filter, ChatService, WebSocket) {
-    // チャットリストを取得する
-    $scope.chats = ChatService.getDataList('./chats');
+    // 参照できるようにあらかじめ初期化する
+    $scope.chat = {
+      roomId:   $('#roomId').val(),
+      userName: $('#userName').val(),
+      message:  ''
+    };
 
-    // 参加イベントを通知する（タグに直接アクセスした方が早い）
-    WebSocket.emit('join', $('#roomId').val(), $('#userName').val());
+    // 参加イベントを通知する
+    WebSocket.emit('join', $scope.chat.roomId, $scope.chat.userName);
+    // メンバーリスト
+    $scope.members = [];
     // 参加イベントを受信した時
     WebSocket.on('join', function(userName) {
       console.log(userName + ' entered.');
+      $timeout(function() {
+        $scope.members.push({
+          userName: userName
+        });
+      });
+    });
+    // メンバーリストを受信した時
+    WebSocket.on('members', function(members) {
+      $timeout(function() {
+        angular.extend($scope.members, members);
+      });
     });
     // 退出イベントを受信した時
     WebSocket.on('leave', function(userName) {
-      console.log(userName + ' leaved.');
+      console.log(userName + ' left.');
+      $timeout(function() {
+        for(var i = 0; i < $scope.members.length; i++) {
+          if($scope.members[i].userName === userName) {
+            $scope.members.splice(i, 1);
+            break;
+          }
+        }
+      });
     });
 
+    // チャットリストを取得する
+    $scope.chats = ChatService.getDataList('./chats');
     // chatというイベントを受信した時
     WebSocket.on('chat', function(chat) {
       $timeout(function() {
