@@ -95,11 +95,13 @@ var mongoose = require('mongoose');
 // 受信側のSocketの用意
 var io = require('socket.io').listen(server);
 
+var cookie = require('cookie');
 // 参加者
 var users = {};
 io.sockets.on('connection', function(socket) {
   // 接続idを確認
   console.log('connected', socket.id);
+  console.log('session', cookie.parse(socket.handshake.headers.cookie));
 
   // 部屋に参加
   socket.on('join', function(roomId, userName) {

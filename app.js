@@ -16,19 +16,30 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
+// mongooseを使用してMongoDBにアクセス
+var mongoose = require('mongoose');
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/chat');
+
 // セッションの準備
 var session = require('express-session');
 var MongoStore = require('connect-mongo')(session);
+var memoryStore = new MongoStore({
+  mongooseConnection: mongoose.connection
+});
 app.use(session({
   secret: 'secret',
-  store: new MongoStore({
-    db: 'session',
-    url: process.env.MONGODB_URI || 'mongodb://localhost:27017/chat'
-  }),
+  store: memoryStore,
   cookie: {
     httpOnly: false
   }
 }));
+
+var signature = require('cookie-signature')
+console.log(signature.unsign('vOZk25a0u_fLepk8BTZPLuJrdn3VHcZ0.aYFGrMcaSieAmiWGVw052/YQJZ4/XKbMJ4fLij/dzh4', 'secret'));
+
+memoryStore.get('vOZk25a0u_fLepk8BTZPLuJrdn3VHcZ0', function(err, result) {
+  console.log(err, result);
+});
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
@@ -43,10 +54,6 @@ app.use('/', routes);
 app.use('/user', user);
 app.use('/room', room);
 app.use('/room/chat', chat);
-
-// mongooseを使用してDB設計・操作
-var mongoose = require('mongoose');
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/chat');
 
 // Chatモデルの登録
 mongoose.model('Chat', new mongoose.Schema({
