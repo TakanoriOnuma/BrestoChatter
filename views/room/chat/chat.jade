@@ -26,9 +26,6 @@ block content
               li(ng-repeat='member in members | orderBy: "userName"') {{member.userName}}
           uib-tab(index='1', heading='アイデア促進')
             span アイデア促進
-    // 通信用hiddenデータ
-    input#roomId(type='hidden', value='#{roomId}')
-    input#userName(type='hidden', value='#{userName}')
 
 block stylesheets
   link(rel='stylesheet', href='https://netdna.bootstrapcdn.com/bootstrap/latest/css/bootstrap.min.css')

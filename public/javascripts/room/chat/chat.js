@@ -233,22 +233,16 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   function($scope, $timeout, $filter, ChatService, WebSocket) {
     // 参照できるようにあらかじめ初期化する
     $scope.chat = {
-      roomId:   $('#roomId').val(),
-      userName: $('#userName').val(),
       message:  ''
     };
 
-    // 参加イベントを通知する
-    WebSocket.emit('join', $scope.chat.roomId, $scope.chat.userName);
     // メンバーリスト
     $scope.members = [];
     // 参加イベントを受信した時
-    WebSocket.on('join', function(userName) {
-      console.log(userName + ' entered.');
+    WebSocket.on('join', function(member) {
+      console.log(member.userName + ' entered.');
       $timeout(function() {
-        $scope.members.push({
-          userName: userName
-        });
+        $scope.members.push(member);
       });
     });
     // メンバーリストを受信した時

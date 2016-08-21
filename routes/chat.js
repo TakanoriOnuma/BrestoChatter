@@ -5,7 +5,6 @@ var mongoose = require('mongoose');
 var sessionCheck = require('../validation/sessionCheck');
 
 router.get('/chat', sessionCheck.loginCheck, sessionCheck.enterCheck, function(req, res, next) {
-  console.log(req);
   res.render('room/chat/chat.jade', {
     title      : 'Chat',
     jQueryFlag : true,

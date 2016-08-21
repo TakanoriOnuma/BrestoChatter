@@ -98,81 +98,72 @@ var sharedsession = require('express-socket.io-session');
 io.use(sharedsession(app.session));
 
 // 参加者
-var users = {};
+var members = {};
 io.sockets.on('connection', function(socket) {
   // 接続idを確認
   console.log('connected', socket.id);
-  console.log('session', socket.handshake.session);
+  // セッション情報を得る
+  var user = socket.handshake.session.user;
+  var room = socket.handshake.session.room;
 
-  // 部屋に参加
-  socket.on('join', function(roomId, userName) {
-    users[socket.id] = {
-      roomId   : roomId,
-      userName : userName
-    };
-    // roomIdのグループに登録する
-    socket.join(users[socket.id].roomId);
-    // 自分以外のroomIdのグループ全体に参加イベントを通知する
-    socket.broadcast.to(users[socket.id].roomId).emit('join', users[socket.id].userName);
-    // 自分に対してはroomIdのグループで今参加しているメンバーを通知する
-    var members = [];
-    for(var id in users) {
-      if(users[id].roomId === users[socket.id].roomId) {
-        members.push({
-          userName: users[id].userName
-        });
-      }
-    }
-    console.log(members);
-    socket.emit('members', members);
-  });
+  // 参加時の処理
+  // 部屋に誰もいない時は配列を初期化する
+  if(!members[room._id]) {
+    console.log('room created:', room._id);
+    members[room._id] = [];
+  }
+  // roomIdのメンバーに参加する
+  members[room._id].push(user);
+  socket.join(room._id);
+  // 自分以外のroomIdのグループ全体に参加イベントを通知する
+  socket.broadcast.to(room._id).emit('join', user);
+  // 自分に対してはroomIdのグループで今参加しているメンバーを通知する
+  socket.emit('members', members[room._id]);
+
   // 部屋から退出（接続が切れたとき）
   socket.on('disconnect', function() {
-    // 参加情報がなければ処理をしない
-    if(!users[socket.id]) return;
-
     // 自分以外のroomIdグループの人に退出イベントを通知する
-    socket.broadcast.to(users[socket.id].roomId).emit('leave', users[socket.id].userName);
-    delete users[socket.id];
-    console.log('now connections:', users);
+    socket.broadcast.to(room._id).emit('leave', user.userName);
+    for(var i = 0; i < members[room._id].length; i++) {
+      if(members[room._id][i] === user) {
+        members[room._id].splice(i, 1);
+        break;
+      }
+    }
+    // 参加者が誰もいなくなったら削除する
+    if(members[room._id].length === 0) {
+      delete members[room._id];
+    }
+    console.log('now connections:', members);
   });
 
   // chatというイベントを受信した時、送られた内容を全てのクライアントに送信する
   socket.on('chat', function(message) {
-    // 参加情報がなければ処理をしない
-    if(!users[socket.id]) return;
-
     var newChat = new (mongoose.model('Chat'))();
     newChat.message = message;
     // 接続情報を元に必要項目を代入
-    newChat.roomId   = users[socket.id].roomId;
-    newChat.userName = users[socket.id].userName;
+    newChat.roomId   = room._id;
+    newChat.userName = user.userName;
     console.log(newChat);
     newChat.save();
     // roomIdグループ全体にチャットイベントを通知する
-    io.to(users[socket.id].roomId).emit('chat', newChat);
+    io.to(room._id).emit('chat', newChat);
   });
 
   // 付箋作成イベントを受信した時
   socket.on('post-it-create', function(postIt) {
-    // 参加情報がなければ処理をしない
-    if(!users[socket.id]) return;
-
     var newPostIt = new (mongoose.model('PostIt'))();
-    newPostIt.roomId = users[socket.id].roomId;
+    newPostIt.roomId = room._id;
     for(var key in postIt) {
       newPostIt[key] = postIt[key];
     }
     console.log(newPostIt);
     newPostIt.save();
-    io.to(users[socket.id].roomId).emit('post-it-create', newPostIt);
+    io.to(room._id).emit('post-it-create', newPostIt);
   });
 
   // 付箋移動イベントを受信した時
   socket.on('post-it-move', function(postItId, position) {
-    // 参加情報がなければ処理をしない
-    if(!users[socket.id]) return;
-
     mongoose.model('PostIt').findById(postItId, function(err, postIt) {
       postIt.position = position;
       postIt.save(function(err) {
@@ -181,7 +172,7 @@ io.sockets.on('connection', function(socket) {
         }
         else {
           // 自分以外に付箋移動イベントを送る
-          socket.broadcast.to(users[socket.id].roomId).emit('post-it-move', postItId, position);
+          socket.broadcast.to(room._id).emit('post-it-move', postItId, position);
         }
       });
     });
@@ -189,9 +180,6 @@ io.sockets.on('connection', function(socket) {
 
   // 付箋内容変更イベントを受信した時
   socket.on('post-it-contents-change', function(postItId, message) {
-    // 参加情報がなければ処理をしない
-    if(!users[socket.id]) return;
-
     mongoose.model('PostIt').findById(postItId, function(err, postIt) {
       postIt.message = message;
       postIt.save(function(err) {
@@ -200,7 +188,7 @@ io.sockets.on('connection', function(socket) {
         }
         else {
           // 自分以外に付箋内容変更イベントを送る
-          socket.broadcast.to(users[socket.id].roomId).emit('post-it-contents-change', postItId, message);
+          socket.broadcast.to(room._id).emit('post-it-contents-change', postItId, message);
         }
       });
     });
@@ -208,16 +196,13 @@ io.sockets.on('connection', function(socket) {
 
   // 付箋削除イベントを受信した時
   socket.on('post-it-delete', function(postItIds) {
-    // 参加情報がなければ処理をしない
-    if(!users[socket.id]) return;
-
     mongoose.model('PostIt').remove({ _id: { $in: postItIds } }, function(err) {
       if(err) {
         console.log(err);
       }
       else {
         // 自分も含めて全員に付箋削除イベントを送る
-        io.to(users[socket.id].roomId).emit('post-it-delete', postItIds);
+        io.to(room._id).emit('post-it-delete', postItIds);
       }
     });
   });
