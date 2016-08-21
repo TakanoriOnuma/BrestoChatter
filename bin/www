@@ -124,6 +124,7 @@ io.sockets.on('connection', function(socket) {
   socket.on('disconnect', function() {
     // 自分以外のroomIdグループの人に退出イベントを通知する
     socket.broadcast.to(room._id).emit('leave', user.userName);
+    // 自分の情報を削除する
     for(var i = 0; i < members[room._id].length; i++) {
       if(members[room._id][i] === user) {
         members[room._id].splice(i, 1);

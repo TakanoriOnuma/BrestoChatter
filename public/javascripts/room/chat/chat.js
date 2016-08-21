@@ -263,6 +263,13 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         }
       });
     });
+    // 通信が切断された時
+    WebSocket.on('disconnect', function() {
+      console.log('disconnected.');
+      $timeout(function() {
+        $scope.members.splice(0, $scope.members.length);
+      });
+    });
 
     // チャットリストを取得する
     $scope.chats = ChatService.getDataList('./chats');
