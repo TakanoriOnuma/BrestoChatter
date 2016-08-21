@@ -92,16 +92,17 @@ function onListening() {
 // mongoDB操作モジュールの読み込み
 var mongoose = require('mongoose');
 
-// 受信側のSocketの用意
+// 受信側のSocketの用意し、セッション情報を共有するように設定する
 var io = require('socket.io').listen(server);
+var sharedsession = require('express-socket.io-session');
+io.use(sharedsession(app.session));
 
-var cookie = require('cookie');
 // 参加者
 var users = {};
 io.sockets.on('connection', function(socket) {
   // 接続idを確認
   console.log('connected', socket.id);
-  console.log('session', cookie.parse(socket.handshake.headers.cookie));
+  console.log('session', socket.handshake.session);
 
   // 部屋に参加
   socket.on('join', function(roomId, userName) {

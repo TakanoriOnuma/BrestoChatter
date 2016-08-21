@@ -23,23 +23,16 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/chat');
 // セッションの準備
 var session = require('express-session');
 var MongoStore = require('connect-mongo')(session);
-var memoryStore = new MongoStore({
-  mongooseConnection: mongoose.connection
-});
-app.use(session({
+app.session = session({
   secret: 'secret',
-  store: memoryStore,
+  store: new MongoStore({
+    mongooseConnection: mongoose.connection
+  }),
   cookie: {
     httpOnly: false
   }
-}));
-
-var signature = require('cookie-signature')
-console.log(signature.unsign('vOZk25a0u_fLepk8BTZPLuJrdn3VHcZ0.aYFGrMcaSieAmiWGVw052/YQJZ4/XKbMJ4fLij/dzh4', 'secret'));
-
-memoryStore.get('vOZk25a0u_fLepk8BTZPLuJrdn3VHcZ0', function(err, result) {
-  console.log(err, result);
 });
+app.use(app.session);
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
