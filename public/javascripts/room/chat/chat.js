@@ -52,16 +52,24 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       restrict: 'E',
       replace: true,
       scope: {
-        postIts: '='
+        postIts : '=',
+        members : '=',
+        user    : '='
       },
       template: '<div class="my-whiteboard" ng-click="reset()">' +
                 '  <span>ホワイトボード</span>' +
                 '  <my-post-it ng-repeat="postIt in postIts track by $index" post-it="postIt">' +
                 '  </my-post-it>' +
+                '  <my-cursor ng-repeat="member in members | filter : myFilter" pos="member.position"></my-cursor>' +
                 '</div>',
       controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
         // linkで使えるようにスコープに代入
         $scope.WebSocket = WebSocket;
+
+        // 自分の情報を取り外すフィルター
+        $scope.myFilter = function(value, index) {
+          return !(value._id === $scope.user._id);
+        };
       }],
       link: function(scope, element, attrs) {
         // ホワイトボードの基準座標を取得する
@@ -130,6 +138,16 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
             // 付箋の作成イベントをサーバーに送る
             scope.WebSocket.emit('post-it-create', postIt);
           }
+        });
+
+        // ホワイトボード上で移動している時の処理
+        element.mousemove(function(event) {
+          // カーソルの移動をサーバーに送る
+          var pos = {
+            x: event.pageX - rootPos.left,
+            y: event.pageY - rootPos.top
+          };
+          scope.WebSocket.emit('cursor-move', scope.user._id, pos);
         });
       }
     };
@@ -210,6 +228,29 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       }
     }
   })
+  // ホワイトボード上で動くカーソル
+  .directive('myCursor', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        pos    : '=',
+        cursor : '='
+      },
+      template: '<img class="my-cursor" ng-src="{{cursor}}">',
+      link: function(scope, element, attrs) {
+        if(!scope.cursor) scope.cursor = '/cursor/arrow.cur';
+
+        // 座標の変化を検知したら、反映させる
+        scope.$watch('pos', function(newValue, oldValue, scope) {
+          element.css({
+            top  : scope.pos.y,
+            left : scope.pos.x
+          });
+        }, true);
+      }
+    }
+  })
   .service('ChatService', ['$http', function($http) {
     // データリストを取得する
     this.getDataList = function(url) {
@@ -246,9 +287,10 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       });
     });
     // メンバーリストを受信した時
-    WebSocket.on('members', function(members) {
+    WebSocket.on('members', function(members, user) {
       $timeout(function() {
         angular.extend($scope.members, members);
+        $scope.user = user;
       });
     });
     // 退出イベントを受信した時
@@ -334,5 +376,16 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           }
         }
       });
+    });
+
+    // カーソル移動イベントを受信した時
+    WebSocket.on('cursor-move', function(userId, pos) {
+      var member = $filter('filter')($scope.members, { _id : userId });
+      if(member.length === 1) {
+        $timeout(function() {
+          member[0].position.x = pos.x;
+          member[0].position.y = pos.y;
+        });
+      }
     });
   }]);

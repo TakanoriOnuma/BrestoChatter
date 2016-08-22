@@ -112,13 +112,15 @@ io.sockets.on('connection', function(socket) {
     console.log('room created:', room._id);
     members[room._id] = [];
   }
+
   // roomIdのメンバーに参加する
+  user.position = { x: 0, y: 0 };
   members[room._id].push(user);
   socket.join(room._id);
   // 自分以外のroomIdのグループ全体に参加イベントを通知する
   socket.broadcast.to(room._id).emit('join', user);
-  // 自分に対してはroomIdのグループで今参加しているメンバーを通知する
-  socket.emit('members', members[room._id]);
+  // 自分に対してはroomIdのグループで今参加しているメンバーと自分の情報を通知する
+  socket.emit('members', members[room._id], user);
 
   // 部屋から退出（接続が切れたとき）
   socket.on('disconnect', function() {
@@ -206,5 +208,18 @@ io.sockets.on('connection', function(socket) {
         io.to(room._id).emit('post-it-delete', postItIds);
       }
     });
+  });
+
+  // カーソル移動イベントを受信した時
+  socket.on('cursor-move', function(userId, pos) {
+    for(var i = 0; i < members[room._id].length; i++) {
+      if(members[room._id][i]._id === userId) {
+        members[room._id][i].position.x = pos.x;
+        members[room._id][i].position.y = pos.y;
+        break;
+      }
+    }
+    // 自分以外にカーソル移動イベントを送信する
+    socket.broadcast.to(room._id).emit('cursor-move', userId, pos);
   });
 });
