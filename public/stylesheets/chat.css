@@ -32,3 +32,7 @@
   border: solid #ffa 1px;
   outline: solid #acf 2px;
 }
+
+.my-cursor {
+  position: absolute;
+}
