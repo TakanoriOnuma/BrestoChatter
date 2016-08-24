@@ -58,17 +58,42 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       },
       template: '<div class="my-whiteboard" ng-click="reset()">' +
                 '  <span>ホワイトボード</span>' +
-                '  <my-post-it ng-repeat="postIt in postIts track by $index" post-it="postIt">' +
+                '  <my-post-it ng-repeat="postIt in postIts" post-it="postIt">' +
                 '  </my-post-it>' +
-                '  <my-cursor ng-repeat="member in members | filter : myFilter" pos="member.position"></my-cursor>' +
+                '  <my-cursor ng-repeat="member in members | filter: myFilter" pos="member.position"></my-cursor>' +
                 '</div>',
-      controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
+      controller: ['$scope', '$filter', 'WebSocket', function($scope, $filter, WebSocket) {
         // linkで使えるようにスコープに代入
         $scope.WebSocket = WebSocket;
 
         // 自分の情報を取り外すフィルター
         $scope.myFilter = function(value, index) {
           return !(value._id === $scope.user._id);
+        };
+
+        // 選択されている付箋全てを移動する
+        this.moveSelectedPostIts = function(dx, dy) {
+          var selectedPostIts = $filter('filter')($scope.postIts, { selected: true });
+
+          // 最小座標の取得
+          var minX = 10000;
+          var minY = 10000;
+          for(var i = 0; i < selectedPostIts.length; i++) {
+            if(selectedPostIts[i].position.x < minX) minX = selectedPostIts[i].position.x;
+            if(selectedPostIts[i].position.y < minY) minY = selectedPostIts[i].position.y;
+          }
+
+          // 移動していいか確認
+          if(minX > dx && minY > dy) {
+            $scope.$apply(function() {
+              for(var i = 0; i < selectedPostIts.length; i++) {
+                selectedPostIts[i].position.x += dx;
+                selectedPostIts[i].position.y += dy;
+                // 座標の変化をサーバーに送る
+                WebSocket.emit('post-it-move', selectedPostIts[i]._id, selectedPostIts[i].position);
+              }
+            });
+          }
         };
       }],
       link: function(scope, element, attrs) {
@@ -156,6 +181,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   .directive('myPostIt', function() {
     return {
       restrict: 'E',
+      require: '^^myWhiteboard',
       replace: true,
       scope: {
         postIt : '='
@@ -167,7 +193,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         // linkで使えるようにスコープに代入
         $scope.WebSocket = WebSocket;
       }],
-      link: function(scope, element, attrs) {
+      link: function(scope, element, attrs, ctrl) {
         // モデル値を初期化する
         scope.postIt.selected = false;
 
@@ -175,10 +201,10 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         element.draggable({
           containment: 'parent',
           drag: function(event, ui) {
-            scope.postIt.position.x = ui.position.left;
-            scope.postIt.position.y = ui.position.top;
-            // 座標の変化をサーバーに送る
-            scope.WebSocket.emit('post-it-move', scope.postIt._id, scope.postIt.position);
+            // 変化量を取得し、親コントローラに移動処理をデリゲートする
+            var dx = ui.position.left - scope.postIt.position.x;
+            var dy = ui.position.top  - scope.postIt.position.y;
+            ctrl.moveSelectedPostIts(dx, dy);
           }
         });
         // 座標の変化を検知した時、付箋の位置を変更する
