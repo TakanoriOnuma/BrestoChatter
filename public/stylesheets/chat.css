@@ -26,6 +26,7 @@
   background-color: #ffa;
   position: absolute;
   overflow: hidden;
+  cursor: default;
 }
 
 .my-post-it-selected {

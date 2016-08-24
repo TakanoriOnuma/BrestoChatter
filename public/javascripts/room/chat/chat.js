@@ -84,7 +84,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           }
 
           // 移動していいか確認
-          if(minX > dx && minY > dy) {
+          if(minX + dx > 0 && minY + dy > 0) {
             $scope.$apply(function() {
               for(var i = 0; i < selectedPostIts.length; i++) {
                 selectedPostIts[i].position.x += dx;
@@ -197,16 +197,6 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         // モデル値を初期化する
         scope.postIt.selected = false;
 
-        // 付箋をドラッグ可能にする
-        element.draggable({
-          containment: 'parent',
-          drag: function(event, ui) {
-            // 変化量を取得し、親コントローラに移動処理をデリゲートする
-            var dx = ui.position.left - scope.postIt.position.x;
-            var dy = ui.position.top  - scope.postIt.position.y;
-            ctrl.moveSelectedPostIts(dx, dy);
-          }
-        });
         // 座標の変化を検知した時、付箋の位置を変更する
         scope.$watch('postIt.position', function(newValue, oldValue, scope) {
           element.css({
@@ -242,14 +232,38 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
               scope.WebSocket.emit('post-it-contents-change', scope.postIt._id, scope.postIt.message);
             });
           }
-          // 未選択状態なら、選択状態にする
-          else {
-            scope.$apply(function() {
-              // Ctrlキーが入力されていなければ親スコープを借りて選択状態を全てリセットする
-              if(!event.ctrlKey) scope.$parent.reset();
-              scope.postIt.selected = true;
-            });
+        });
+
+
+        // ホワイトボードの基準座標を取得する
+        var rootPos   = element.parent().position();
+        rootPos.top  -= element.parent().scrollTop();
+        rootPos.left -= element.parent().scrollLeft();
+
+        var offset = null;
+        var pos = null;
+        element.mousedown(function(event) {
+          pos = element.position();
+          offset = { x: event.offsetX, y: event.offsetY };
+          console.log(pos);
+          scope.$apply(function() {
+            // Ctrlキーが入力されていなければ親スコープを借りて選択状態を全てリセットする
+            if(!event.ctrlKey) scope.$parent.reset();
+            scope.postIt.selected = true;
+          });
+        });
+        element.parent().mousemove(function(event) {
+          if(offset) {
+            var movedPos = {
+              x : event.pageX - offset.x - rootPos.left,
+              y : event.pageY - offset.y - rootPos.top
+            };
+            ctrl.moveSelectedPostIts(movedPos.x - pos.x, movedPos.y - pos.y);
+            pos = movedPos;
           }
+        });
+        element.parent().mouseup(function(event) {
+          offset = null;
         });
       }
     }
