@@ -186,7 +186,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         postIt : '='
       },
-      template: '<div class="my-post-it" ng-class="{ \'my-post-it-selected\': postIt.selected }">' +
+      template: '<div class="my-post-it unselect" ng-class="{ \'my-post-it-selected\': postIt.selected }">' +
                 '  <span ng-bind-html="postIt.message | nl2br"></span>' +
                 '</div>',
       controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
