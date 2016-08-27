@@ -96,7 +96,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           }
         };
       }],
-      link: function(scope, element, attrs) {
+      link: function(scope, element, attrs, ctrl) {
         // ホワイトボードの基準座標を取得する
         var rootPos   = element.position();
         rootPos.top  -= element.scrollTop();
@@ -174,6 +174,27 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           };
           scope.WebSocket.emit('cursor-move', scope.user._id, pos);
         });
+
+
+        // 付箋に関する処理
+        scope.offset = null;
+        scope.pos = null;
+        scope.isEditable = false;
+        scope.isEditing = false;
+        element.mousemove(function(event) {
+          if(scope.offset && !scope.isEditing) {
+            scope.isEditable = false;
+            var movedPos = {
+              x : event.pageX - scope.offset.x - rootPos.left,
+              y : event.pageY - scope.offset.y - rootPos.top
+            };
+            ctrl.moveSelectedPostIts(movedPos.x - scope.pos.x, movedPos.y - scope.pos.y);
+            scope.pos = movedPos;
+          }
+        });
+        element.mouseup(function(event) {
+          scope.offset = null;
+        });
       }
     };
   })
@@ -207,15 +228,13 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
 
         // 元々のタグを保持しておく
         var $span = $('span', element);
-        var isEditing = false;
-        var isEditable = false;
         // クリック時の処理
         element.click(function(event) {
           event.stopPropagation();
           // 2回目のクリック時、内容を変更できるようにする
           // （mousedownで選択後clickですぐイベントが起きてしまうため）
-          if(isEditable) {
-            isEditing = true;
+          if(scope.$parent.$parent.isEditable) {
+            scope.$parent.$parent.isEditing = true;
             // spanタグをtextareaタグに置き換える
             var elem = $('span', element);
             var $input = $('<textarea>').val(scope.postIt.message);
@@ -228,7 +247,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
 
             // フォーカスが外れたときはモデルに入力内容を反映させて元に戻す
             $input.blur(function(event) {
-              isEditing = false;
+              scope.$parent.$parent.isEditing = false;
               scope.$apply(function() {
                 scope.postIt.message = $input.val();
               });
@@ -238,45 +257,25 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
             });
           }
           else {
-            isEditable = true;
+            scope.$parent.$parent.isEditable = true;
           }
         });
 
-        // ホワイトボードの基準座標を取得する
-        var rootPos   = element.parent().position();
-        rootPos.top  -= element.parent().scrollTop();
-        rootPos.left -= element.parent().scrollLeft();
-
-        var offset = null;
-        var pos = null;
+        // 付箋を押下した時
         element.mousedown(function(event) {
-          pos = element.position();
-          offset = { x: event.offsetX, y: event.offsetY };
+          scope.$parent.$parent.pos = element.position();
+          scope.$parent.$parent.offset = { x: event.offsetX, y: event.offsetY };
           // 既に選択されていたらこれ以上処理をしない
           if(scope.postIt.selected) {
             return;
           }
 
-          isEditable = false;
+          scope.$parent.$parent.isEditable = false;
           scope.$apply(function() {
             // Ctrlキーが入力されていなければ親スコープを借りて選択状態を全てリセットする
-            if(!event.ctrlKey) scope.$parent.reset();
+            if(!event.ctrlKey) scope.$parent.$parent.reset();
             scope.postIt.selected = true;
           });
-        });
-        element.parent().mousemove(function(event) {
-          if(offset && !isEditing) {
-            isEditable = false;
-            var movedPos = {
-              x : event.pageX - offset.x - rootPos.left,
-              y : event.pageY - offset.y - rootPos.top
-            };
-            ctrl.moveSelectedPostIts(movedPos.x - pos.x, movedPos.y - pos.y);
-            pos = movedPos;
-          }
-        });
-        element.parent().mouseup(function(event) {
-          offset = null;
         });
       }
     }
