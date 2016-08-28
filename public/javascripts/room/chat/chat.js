@@ -62,7 +62,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
                 '  </my-post-it>' +
                 '  <my-cursor ng-repeat="member in members | filter: myFilter" pos="member.position"></my-cursor>' +
                 '</div>',
-      controller: ['$scope', '$filter', 'WebSocket', function($scope, $filter, WebSocket) {
+      controller: ['$scope', '$filter', 'WebSocket', 'DragManager', function($scope, $filter, WebSocket, DragManager) {
         // linkで使えるようにスコープに代入
         $scope.WebSocket = WebSocket;
 
@@ -83,18 +83,22 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
             if(selectedPostIts[i].position.y < minY) minY = selectedPostIts[i].position.y;
           }
 
-          // 移動していいか確認
-          if(minX + dx > 0 && minY + dy > 0) {
-            $scope.$apply(function() {
-              for(var i = 0; i < selectedPostIts.length; i++) {
-                selectedPostIts[i].position.x += dx;
-                selectedPostIts[i].position.y += dy;
-                // 座標の変化をサーバーに送る
-                WebSocket.emit('post-it-move', selectedPostIts[i]._id, selectedPostIts[i].position);
-              }
-            });
+          // 移動が駄目ならキャンセルする
+          if(minX + dx < 0 || minY + dy < 0) {
+            return false;
           }
+          $scope.$apply(function() {
+            for(var i = 0; i < selectedPostIts.length; i++) {
+              selectedPostIts[i].position.x += dx;
+              selectedPostIts[i].position.y += dy;
+              // 座標の変化をサーバーに送る
+              WebSocket.emit('post-it-move', selectedPostIts[i]._id, selectedPostIts[i].position);
+            }
+          });
+          // 移動を無事実行したことを通知する
+          return true;
         };
+        DragManager.setHandler(this.moveSelectedPostIts);
       }],
       link: function(scope, element, attrs, ctrl) {
         // ホワイトボードの基準座標を取得する
@@ -198,6 +202,69 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       }
     };
   })
+  // ドラッグ移動を管理するファクトリー
+  .factory('DragManager', function() {
+    var _handler = null;
+    var _dragProcess = function(dx, dy) {
+      // 実行する関数がないならスキップする
+      if(!_handler) return;
+
+      // _offsetがあるかチェックする
+      if(_offset.x !== 0 || _offset.y !== 0) {
+        console.log(dx, dy, _offset);
+        // 同符号の時は_offset量を加えて終了
+        if(_offset.x * dx > 0 || _offset.y * dy > 0) {
+          _offset.x += dx;
+          _offset.y += dy;
+          return;
+        }
+        // 異符号の時は_offsetの絶対値を減らす
+        _offset.x += dx;
+        _offset.y += dy;
+        // それでも異符号のままなら終了
+        if(_offset.x * dx < 0 || _offset.y * dy < 0) {
+          return;
+        }
+        // 符号が変わったらその量を記録する
+        dx = _offset.x;
+        dy = _offset.y;
+        _offset.x = 0;
+        _offset.y = 0;
+      }
+
+      // 実行する関数がキャンセルした場合は、
+      // 移動量を保存しておく
+      if(!_handler(dx, dy)) {
+        _offset.x += dx;
+        _offset.y += dy;
+      }
+    };
+    var _pos    = null;
+    var _offset = { x: 0, y: 0 };
+    $(window)
+      .mousemove(function(event) {
+        if(_pos) {
+          var movedPos = { x: event.pageX, y: event.pageY };
+          _dragProcess(movedPos.x - _pos.x, movedPos.y - _pos.y);
+          _pos = movedPos;
+        }
+      })
+      .mouseup(function(event) {
+        _pos    = null;
+        _offset = { x: 0, y: 0 };
+      })
+    return {
+      setHandler: function(handler) {
+        _handler = handler;
+      },
+      // 渡したエレメントのドラッグを検知するよう登録する
+      setDragMode: function($elem) {
+        $elem.mousedown(function(event) {
+          _pos = { x: event.pageX, y: event.pageY };
+        });
+      }
+    };
+  })
   // ホワイトボード上で使う付箋
   .directive('myPostIt', function() {
     return {
@@ -210,9 +277,11 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       template: '<div class="my-post-it unselect" ng-class="{ \'my-post-it-selected\': postIt.selected }">' +
                 '  <span ng-bind-html="postIt.message | nl2br"></span>' +
                 '</div>',
-      controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
+      controller: ['$scope', '$element', 'WebSocket', 'DragManager', function($scope, $element, WebSocket, DragManager) {
         // linkで使えるようにスコープに代入
         $scope.WebSocket = WebSocket;
+        // このタグをドラッグ移動できるようマネージャーに登録する
+        DragManager.setDragMode($element);
       }],
       link: function(scope, element, attrs, ctrl) {
         // モデル値を初期化する
@@ -263,8 +332,8 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
 
         // 付箋を押下した時
         element.mousedown(function(event) {
-          scope.$parent.$parent.pos = element.position();
-          scope.$parent.$parent.offset = { x: event.offsetX, y: event.offsetY };
+          // scope.$parent.$parent.pos = element.position();
+          // scope.$parent.$parent.offset = { x: event.offsetX, y: event.offsetY };
           // 既に選択されていたらこれ以上処理をしない
           if(scope.postIt.selected) {
             return;
