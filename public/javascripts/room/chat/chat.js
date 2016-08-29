@@ -83,10 +83,17 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
             if(selectedPostIts[i].position.y < minY) minY = selectedPostIts[i].position.y;
           }
 
-          // 移動が駄目ならキャンセルする
-          if(minX + dx < 0 || minY + dy < 0) {
-            return false;
+          // 移動できないときは移動できる分だけ移動し、余剰分は保存しておく
+          var offset = { x: 0, y: 0 };
+          if(minX + dx < 0) { offset.x = minX + dx; dx = -minX; }
+          if(minY + dy < 0) { offset.y = minY + dy; dy = -minY; }
+
+          // 移動量がないなら余剰分を返して終了する
+          if(dx === 0 && dy === 0) {
+            return offset;
           }
+
+          // 移動処理を行う
           $scope.$apply(function() {
             for(var i = 0; i < selectedPostIts.length; i++) {
               selectedPostIts[i].position.x += dx;
@@ -95,8 +102,8 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
               WebSocket.emit('post-it-move', selectedPostIts[i]._id, selectedPostIts[i].position);
             }
           });
-          // 移動を無事実行したことを通知する
-          return true;
+          // 余剰分を返す
+          return offset;
         };
         DragManager.setHandler(this.moveSelectedPostIts);
       }],
@@ -212,31 +219,24 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       // _offsetがあるかチェックする
       if(_offset.x !== 0 || _offset.y !== 0) {
         console.log(dx, dy, _offset);
-        // 同符号の時は_offset量を加えて終了
-        if(_offset.x * dx > 0 || _offset.y * dy > 0) {
-          _offset.x += dx;
-          _offset.y += dy;
-          return;
-        }
+        // 同符号の時は_offset量を加えて変化量を0にする
+        if(_offset.x * dx > 0) { _offset.x += dx; dx = 0; }
+        if(_offset.y * dy > 0) { _offset.y += dy; dy = 0; }
         // 異符号の時は_offsetの絶対値を減らす
         _offset.x += dx;
         _offset.y += dy;
-        // それでも異符号のままなら終了
-        if(_offset.x * dx < 0 || _offset.y * dy < 0) {
-          return;
-        }
+        // 異符号のままなら変化量を0にし、
         // 符号が変わったらその量を記録する
-        dx = _offset.x;
-        dy = _offset.y;
-        _offset.x = 0;
-        _offset.y = 0;
+        dx = (_offset.x * dx < 0) ? 0 : _offset.x;
+        dy = (_offset.y * dy < 0) ? 0 : _offset.y;
       }
 
-      // 実行する関数がキャンセルした場合は、
-      // 移動量を保存しておく
-      if(!_handler(dx, dy)) {
-        _offset.x += dx;
-        _offset.y += dy;
+      // 移動量がある場合は関数を実行し、余剰分を_offsetに保存する
+      if(dx !== 0 || dy !== 0) {
+        var offset = _handler(dx, dy);
+        // 変化量があるものに対してのみ余剰分を更新
+        if(dx !== 0) { _offset.x = offset.x; }
+        if(dy !== 0) { _offset.y = offset.y; }
       }
     };
     var _pos    = null;
