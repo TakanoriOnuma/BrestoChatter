@@ -158,6 +158,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         scope.reset = function() {
           angular.forEach(scope.postIts, function(postIt, index, arr) {
             postIt.selected = false;
+            postIt.editable = false;
           });
         }
 
@@ -185,27 +186,6 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           };
           scope.WebSocket.emit('cursor-move', scope.user._id, pos);
         });
-
-
-        // 付箋に関する処理
-        scope.offset = null;
-        scope.pos = null;
-        scope.isEditable = false;
-        scope.isEditing = false;
-        element.mousemove(function(event) {
-          if(scope.offset && !scope.isEditing) {
-            scope.isEditable = false;
-            var movedPos = {
-              x : event.pageX - scope.offset.x - rootPos.left,
-              y : event.pageY - scope.offset.y - rootPos.top
-            };
-            ctrl.moveSelectedPostIts(movedPos.x - scope.pos.x, movedPos.y - scope.pos.y);
-            scope.pos = movedPos;
-          }
-        });
-        element.mouseup(function(event) {
-          scope.offset = null;
-        });
       }
     };
   })
@@ -218,7 +198,6 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
 
       // _offsetがあるかチェックする
       if(_offset.x !== 0 || _offset.y !== 0) {
-        console.log(dx, dy, _offset);
         // 同符号の時は_offset量を加えて変化量を0にする
         if(_offset.x * dx > 0) { _offset.x += dx; dx = 0; }
         if(_offset.y * dy > 0) { _offset.y += dy; dy = 0; }
@@ -239,14 +218,20 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         if(dy !== 0) { _offset.y = offset.y; }
       }
     };
-    var _pos    = null;
-    var _offset = { x: 0, y: 0 };
+    // 状態変数
+    var _pos       = null;
+    var _offset    = { x: 0, y: 0 };
+    var _isDragged = false;
     $(window)
+      .mousedown(function(event) {
+        _isDragged = false;
+      })
       .mousemove(function(event) {
         if(_pos) {
           var movedPos = { x: event.pageX, y: event.pageY };
           _dragProcess(movedPos.x - _pos.x, movedPos.y - _pos.y);
           _pos = movedPos;
+          _isDragged = true;
         }
       })
       .mouseup(function(event) {
@@ -254,6 +239,8 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         _offset = { x: 0, y: 0 };
       })
     return {
+      // func(dx, dy)を実行させる関数をセット
+      // 現在は１つのハンドラーのみ登録可能
       setHandler: function(handler) {
         _handler = handler;
       },
@@ -262,6 +249,10 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         $elem.mousedown(function(event) {
           _pos = { x: event.pageX, y: event.pageY };
         });
+      },
+      // ドラッグが行われたかチェック
+      isDragged: function() {
+        return _isDragged;
       }
     };
   })
@@ -277,15 +268,17 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       template: '<div class="my-post-it unselect" ng-class="{ \'my-post-it-selected\': postIt.selected }">' +
                 '  <span ng-bind-html="postIt.message | nl2br"></span>' +
                 '</div>',
-      controller: ['$scope', '$element', 'WebSocket', 'DragManager', function($scope, $element, WebSocket, DragManager) {
+      controller: ['$scope', 'WebSocket', 'DragManager', function($scope, WebSocket, DragManager) {
         // linkで使えるようにスコープに代入
-        $scope.WebSocket = WebSocket;
-        // このタグをドラッグ移動できるようマネージャーに登録する
-        DragManager.setDragMode($element);
+        $scope.WebSocket   = WebSocket;
+        $scope.DragManager = DragManager;
       }],
       link: function(scope, element, attrs, ctrl) {
         // モデル値を初期化する
         scope.postIt.selected = false;
+        scope.postIt.editable = false;
+        // このタグをドラッグ移動できるようマネージャーに登録する
+        scope.DragManager.setDragMode(element);
 
         // 座標の変化を検知した時、付箋の位置を変更する
         scope.$watch('postIt.position', function(newValue, oldValue, scope) {
@@ -300,46 +293,45 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         // クリック時の処理
         element.click(function(event) {
           event.stopPropagation();
-          // 2回目のクリック時、内容を変更できるようにする
-          // （mousedownで選択後clickですぐイベントが起きてしまうため）
-          if(scope.$parent.$parent.isEditable) {
-            scope.$parent.$parent.isEditing = true;
-            // spanタグをtextareaタグに置き換える
-            var elem = $('span', element);
-            var $input = $('<textarea>').val(scope.postIt.message);
-            $input.css({
-              width: '100%',
-              height: '100%'
-            });
-            elem.replaceWith($input);
-            $input.focus();
+          // 編集状態でない場合は編集可能にして、次のクリックで編集出来るようにする
+          if(!scope.postIt.editable) {
+            scope.postIt.editable = true;
+            return;
+          }
+          // ドラッグをしていたら処理をスキップする
+          if(scope.DragManager.isDragged()) {
+            return;
+          }
 
-            // フォーカスが外れたときはモデルに入力内容を反映させて元に戻す
-            $input.blur(function(event) {
-              scope.$parent.$parent.isEditing = false;
-              scope.$apply(function() {
-                scope.postIt.message = $input.val();
-              });
-              $input.replaceWith($span);
-              // メッセージの変更をサーバーに送る
-              scope.WebSocket.emit('post-it-contents-change', scope.postIt._id, scope.postIt.message);
+          // spanタグをtextareaタグに置き換える
+          var $elem  = $('span', element);
+          var $input = $('<textarea>').val(scope.postIt.message);
+          $input.css({
+            width: '100%',
+            height: '100%'
+          });
+          $elem.replaceWith($input);
+          $input.focus();
+
+          // フォーカスが外れたときはモデルに入力内容を反映させて元に戻す
+          $input.blur(function(event) {
+            scope.$parent.$parent.isEditing = false;
+            scope.$apply(function() {
+              scope.postIt.message = $input.val();
             });
-          }
-          else {
-            scope.$parent.$parent.isEditable = true;
-          }
+            $input.replaceWith($span);
+            // メッセージの変更をサーバーに送る
+            scope.WebSocket.emit('post-it-contents-change', scope.postIt._id, scope.postIt.message);
+          });
         });
 
         // 付箋を押下した時
         element.mousedown(function(event) {
-          // scope.$parent.$parent.pos = element.position();
-          // scope.$parent.$parent.offset = { x: event.offsetX, y: event.offsetY };
           // 既に選択されていたらこれ以上処理をしない
           if(scope.postIt.selected) {
             return;
           }
 
-          scope.$parent.$parent.isEditable = false;
           scope.$apply(function() {
             // Ctrlキーが入力されていなければ親スコープを借りて選択状態を全てリセットする
             if(!event.ctrlKey) scope.$parent.$parent.reset();
