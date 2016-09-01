@@ -61,10 +61,13 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
                 '  <my-post-it ng-repeat="postIt in postIts" post-it="postIt">' +
                 '  </my-post-it>' +
                 '  <my-cursor ng-repeat="member in members | filter: myFilter" pos="member.position"></my-cursor>' +
+                '  <my-select-field select-field="selField"></my-select-field>' +
                 '</div>',
       controller: ['$scope', '$filter', 'WebSocket', 'DragManager', function($scope, $filter, WebSocket, DragManager) {
         // linkで使えるようにスコープに代入
         $scope.WebSocket = WebSocket;
+        // スコープ変数の初期化
+        $scope.selField = {};
 
         // 自分の情報を取り外すフィルター
         $scope.myFilter = function(value, index) {
@@ -361,6 +364,56 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           element.css({
             top  : scope.pos.y,
             left : scope.pos.x
+          });
+        }, true);
+      }
+    }
+  })
+  // ホワイトボード上で範囲選択を表示するディレクティブ
+  .directive('mySelectField', function() {
+    return {
+      restrict: 'E',
+      require: '^^myWhiteboard',
+      replace: true,
+      scope: {
+        selectField : '='
+      },
+      template: '<div class="my-select-field" ng-show="show"></div>',
+      controller: ['$scope', function($scope) {
+        // スコープ変数の初期化
+        $scope.show = true;
+        // 未定義変数の初期化
+        if($scope.selectField        === undefined) $scope.selectField        = {};
+        if($scope.selectField.x      === undefined) $scope.selectField.x      = 0;
+        if($scope.selectField.y      === undefined) $scope.selectField.y      = 0;
+        if($scope.selectField.width  === undefined) $scope.selectField.width  = 200;
+        if($scope.selectField.height === undefined) $scope.selectField.height = 100;
+      }],
+      link: function(scope, element, attrs) {
+        // スコープ変数の初期化
+        scope.show = true;
+
+        // 親の起点を保存しておく
+        var rootPos = element.parent().position();
+
+        // 親（ホワイトボード上）でマウスを押下したときの処理
+        element.parent().mousedown(function(event) {
+          // 親のイベントから始まった時
+          if(element.parent()[0] === event.target) {
+            scope.$apply(function() {
+              scope.selectField.x = event.pageX - rootPos.left;
+              scope.selectField.y = event.pageY - rootPos.top;
+            });
+          }
+        });
+
+        // 変数が変化した時、CSSを変更する
+        scope.$watch('selectField', function(newValue, oldValue, scope) {
+          element.css({
+            left:   scope.selectField.x,
+            top:    scope.selectField.y,
+            width:  scope.selectField.width,
+            height: scope.selectField.height
           });
         }, true);
       }

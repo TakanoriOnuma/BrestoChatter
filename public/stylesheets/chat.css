@@ -44,3 +44,9 @@
 .my-cursor {
   position: absolute;
 }
+
+.my-select-field {
+  position: absolute;
+  border: solid #00f 1px;
+  background-color: rgba(0, 0, 255, 0.2);
+}
