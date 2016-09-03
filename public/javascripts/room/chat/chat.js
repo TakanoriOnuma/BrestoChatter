@@ -110,7 +110,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           // 余剰分を返す
           return offset;
         };
-        DragManager.setHandler(this.moveSelectedPostIts);
+        DragManager.addHandler(this.moveSelectedPostIts);
       }],
       link: function(scope, element, attrs, ctrl) {
         // ホワイトボードの基準座標を取得する
@@ -196,36 +196,36 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   })
   // ドラッグ移動を管理するファクトリー
   .factory('DragManager', function() {
-    var _handler = null;
+    var _handlers = [];
+    var _offsets  = [];
     var _dragProcess = function(dx, dy) {
-      // 実行する関数がないならスキップする
-      if(!_handler) return;
+      // 1つ1つハンドラーを実行していく
+      for(var i = 0; i < _handlers.length; i++) {
+        // offsetがあるかチェックする
+        if(_offsets[i].x !== 0 || _offsets[i].y !== 0) {
+          // 同符号の時はoffset量を加えて変化量を0にする
+          if(_offsets[i].x * dx > 0) { _offsets[i].x += dx; dx = 0; }
+          if(_offsets[i].y * dy > 0) { _offsets[i].y += dy; dy = 0; }
+          // 異符号の時はoffsetの絶対値を減らす
+          _offsets[i].x += dx;
+          _offsets[i].y += dy;
+          // 異符号のままなら変化量を0にし、
+          // 符号が変わったらその量を記録する
+          dx = (_offsets[i].x * dx < 0) ? 0 : _offsets[i].x;
+          dy = (_offsets[i].y * dy < 0) ? 0 : _offsets[i].y;
+        }
 
-      // _offsetがあるかチェックする
-      if(_offset.x !== 0 || _offset.y !== 0) {
-        // 同符号の時は_offset量を加えて変化量を0にする
-        if(_offset.x * dx > 0) { _offset.x += dx; dx = 0; }
-        if(_offset.y * dy > 0) { _offset.y += dy; dy = 0; }
-        // 異符号の時は_offsetの絶対値を減らす
-        _offset.x += dx;
-        _offset.y += dy;
-        // 異符号のままなら変化量を0にし、
-        // 符号が変わったらその量を記録する
-        dx = (_offset.x * dx < 0) ? 0 : _offset.x;
-        dy = (_offset.y * dy < 0) ? 0 : _offset.y;
-      }
-
-      // 移動量がある場合は関数を実行し、余剰分を_offsetに保存する
-      if(dx !== 0 || dy !== 0) {
-        var offset = _handler(dx, dy);
-        // 変化量があるものに対してのみ余剰分を更新
-        if(dx !== 0) { _offset.x = offset.x; }
-        if(dy !== 0) { _offset.y = offset.y; }
+        // 移動量がある場合は関数を実行し、余剰分を_offsetに保存する
+        if(dx !== 0 || dy !== 0) {
+          var offset = _handlers[i](dx, dy);
+          // 変化量があるものに対してのみ余剰分を更新
+          if(dx !== 0) { _offsets[i].x = offset.x; }
+          if(dy !== 0) { _offsets[i].y = offset.y; }
+        }
       }
     };
     // 状態変数
     var _pos       = null;
-    var _offset    = { x: 0, y: 0 };
     var _isDragged = false;
     $(window)
       .mousedown(function(event) {
@@ -241,13 +241,15 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       })
       .mouseup(function(event) {
         _pos    = null;
-        _offset = { x: 0, y: 0 };
-      })
+        for(var i = 0; i < _offsets.length; i++) {
+          _offsets[i] = { x: 0, y: 0 };
+        }
+      });
     return {
       // func(dx, dy)を実行させる関数をセット
-      // 現在は１つのハンドラーのみ登録可能
-      setHandler: function(handler) {
-        _handler = handler;
+      addHandler: function(handler) {
+        _handlers.push(handler);
+        _offsets.push({ x: 0, y: 0 });
       },
       // 渡したエレメントのドラッグを検知するよう登録する
       setDragMode: function($elem) {
