@@ -200,7 +200,10 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
     var _offsets  = [];
     var _dragProcess = function(dx, dy) {
       // 1つ1つハンドラーを実行していく
-      for(var i = 0; i < _handlers.length; i++) {
+      for(var i = 0; i < _doHandlers.length; i++) {
+        // offsetが存在しない時は初期化する
+        if(!_offsets[i]) _offsets[i] = { x: 0, y: 0 };
+
         // offsetがあるかチェックする
         if(_offsets[i].x !== 0 || _offsets[i].y !== 0) {
           // 同符号の時はoffset量を加えて変化量を0にする
@@ -217,7 +220,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
 
         // 移動量がある場合は関数を実行し、余剰分を_offsetに保存する
         if(dx !== 0 || dy !== 0) {
-          var offset = _handlers[i](dx, dy);
+          var offset = _doHandlers[i](dx, dy);
           // 変化量があるものに対してのみ余剰分を更新
           if(dx !== 0) { _offsets[i].x = offset.x; }
           if(dy !== 0) { _offsets[i].y = offset.y; }
@@ -227,6 +230,8 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
     // 状態変数
     var _pos       = null;
     var _isDragged = false;
+    var _dragObjs  = new WeakMap();   // 登録オブジェクト（エレメントをキーにするためWeakMap）
+    var _doHandlers = [];             // 実行関数
     $(window)
       .mousedown(function(event) {
         _isDragged = false;
@@ -240,10 +245,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         }
       })
       .mouseup(function(event) {
-        _pos    = null;
-        for(var i = 0; i < _offsets.length; i++) {
-          _offsets[i] = { x: 0, y: 0 };
-        }
+        _pos        = null;
+        _offsets    = [];
+        _doHandlers = [];
       });
     return {
       // func(dx, dy)を実行させる関数をセット
@@ -252,10 +256,38 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         _offsets.push({ x: 0, y: 0 });
       },
       // 渡したエレメントのドラッグを検知するよう登録する
-      setDragMode: function($elem) {
-        $elem.mousedown(function(event) {
-          _pos = { x: event.pageX, y: event.pageY };
-        });
+      // handlerはfunc(dx, dy)->offset({x, y})の処理を行う関数
+      // ※同じエレメントに何回も登録できると見せかけて
+      //   $elem.mousedownで複数登録してしまうためやってはいけない。
+      setDragMode: function($elem, handler) {
+        // エレメント1つ1つにハンドラーが実行できるようにする
+        for(var i = 0; i < $elem.length; i++) {
+          var $e = $elem[i];
+
+          if(!_dragObjs.has($e)) {
+            _dragObjs.set($e, {
+              offset     : { x: 0, y: 0 },
+              isDragged  : false,
+              handlers   : []
+            });
+          }
+          _dragObjs.get($e).handlers.push(handler);
+          // $elemにイベントを追加
+          $elem.mousedown(function(event) {
+            console.log($e, event.target);
+            // イベントが自分自身からの時
+            if($e === event.target) {
+              _pos = { x: event.pageX, y: event.pageY };
+              _doHandlers = _doHandlers.concat(_dragObjs.get($e).handlers);
+              console.log(_doHandlers);
+            }
+            console.log(_dragObjs);
+          });
+          // ドラッグされたかのチェック関数を$eに登録する
+          $elem.isDragged = function() {
+            return _dragObjs.get($e).isDragged;
+          }
+        }
       },
       // ドラッグが行われたかチェック
       isDragged: function() {
@@ -285,7 +317,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         scope.postIt.selected = false;
         scope.postIt.editable = false;
         // このタグをドラッグ移動できるようマネージャーに登録する
-        scope.DragManager.setDragMode(element);
+        scope.DragManager.setDragMode(element, ctrl.moveSelectedPostIts);
 
         // 座標の変化を検知した時、付箋の位置を変更する
         scope.$watch('postIt.position', function(newValue, oldValue, scope) {
@@ -381,7 +413,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         selectField : '='
       },
       template: '<div class="my-select-field" ng-show="show"></div>',
-      controller: ['$scope', function($scope) {
+      controller: ['$scope', 'DragManager', function($scope, DragManager) {
         // スコープ変数の初期化
         $scope.show = true;
         // 未定義変数の初期化
@@ -390,6 +422,8 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         if($scope.selectField.y      === undefined) $scope.selectField.y      = 0;
         if($scope.selectField.width  === undefined) $scope.selectField.width  = 200;
         if($scope.selectField.height === undefined) $scope.selectField.height = 100;
+        // リンクで使えるようにスコープに代入
+        $scope.DragManager = DragManager;
       }],
       link: function(scope, element, attrs) {
         // スコープ変数の初期化
@@ -407,6 +441,14 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
               scope.selectField.y = event.pageY - rootPos.top;
             });
           }
+        });
+        // ドラッグによるサイズの変更
+        scope.DragManager.setDragMode(element.parent(), function(dx, dy) {
+          scope.$apply(function() {
+            scope.selectField.width  += dx;
+            scope.selectField.height += dy;
+          });
+          return { x: 0, y: 0 };
         });
 
         // 変数が変化した時、CSSを変更する
