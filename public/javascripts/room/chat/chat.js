@@ -435,7 +435,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       }],
       link: function(scope, element, attrs) {
         // スコープ変数の初期化
-        scope.show = true;
+        scope.show = false;
 
         // 親の起点を保存しておく
         var rootPos = element.parent().position();
