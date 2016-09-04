@@ -166,11 +166,13 @@ io.sockets.on('connection', function(socket) {
   });
 
   // 付箋移動イベントを受信した時
-  socket.on('post-its-move', function(postItIds, dx, dy) {
+  socket.on('post-its-move', function(postItIds, positions) {
     for(var i = 0; i < postItIds.length; i++) {
       mongoose.model('PostIt').findById(postItIds[i], function(err, postIt) {
-        postIt.position.x += dx;
-        postIt.position.y += dy;
+        // 文字列化して添え字番号を調べる（非同期なためループ変数iが使えない）
+        var idx = postItIds.indexOf('' + postIt._id);
+        postIt.position.x = positions[idx].x;
+        postIt.position.y = positions[idx].y;
         postIt.save(function(err) {
           if(err) {
             console.log(err);
@@ -179,7 +181,7 @@ io.sockets.on('connection', function(socket) {
       });
     }
     // 自分以外に付箋移動イベントを送る
-    socket.broadcast.to(room._id).emit('post-its-move', postItIds, dx, dy);
+    socket.broadcast.to(room._id).emit('post-its-move', postItIds, positions);
   });
 
   // 付箋内容変更イベントを受信した時

@@ -99,13 +99,15 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           // 移動処理を行う
           $scope.$apply(function() {
             var movedPostItIds = [];
+            var positions      = [];
             for(var i = 0; i < selectedPostIts.length; i++) {
               selectedPostIts[i].position.x += dx;
               selectedPostIts[i].position.y += dy;
               movedPostItIds.push(selectedPostIts[i]._id);
+              positions.push(selectedPostIts[i].position);
             }
             // 座標の変化をサーバーに送る
-            WebSocket.emit('post-its-move', movedPostItIds, dx, dy);
+            WebSocket.emit('post-its-move', movedPostItIds, positions);
           });
           // 余剰分を返す
           return offset;
@@ -576,13 +578,13 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
     });
 
     // 付箋移動イベントを受信した時
-    WebSocket.on('post-its-move', function(postItIds, dx, dy) {
+    WebSocket.on('post-its-move', function(postItIds, positions) {
       $timeout(function() {
         for(var i = 0; i < postItIds.length; i++) {
           var postIt = $filter('filter')($scope.postIts, { _id: postItIds[i] });
           if(postIt.length === 1) {
-            postIt[0].position.x += dx;
-            postIt[0].position.y += dy;
+            postIt[0].position.x = positions[i].x;
+            postIt[0].position.y = positions[i].y;
           }
         }
       });
