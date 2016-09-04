@@ -397,17 +397,15 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         selectField : '='
       },
       template: '<div class="my-select-field" ng-show="show"></div>',
-      controller: ['$scope', 'DragManager', function($scope, DragManager) {
+      controller: ['$scope', function($scope) {
         // スコープ変数の初期化
-        $scope.show = true;
+        $scope.show = false;
         // 未定義変数の初期化
         if($scope.selectField        === undefined) $scope.selectField        = {};
         if($scope.selectField.x      === undefined) $scope.selectField.x      = 0;
         if($scope.selectField.y      === undefined) $scope.selectField.y      = 0;
-        if($scope.selectField.width  === undefined) $scope.selectField.width  = 200;
-        if($scope.selectField.height === undefined) $scope.selectField.height = 100;
-        // リンクで使えるようにスコープに代入
-        $scope.DragManager = DragManager;
+        if($scope.selectField.width  === undefined) $scope.selectField.width  = 0;
+        if($scope.selectField.height === undefined) $scope.selectField.height = 0;
       }],
       link: function(scope, element, attrs) {
         // スコープ変数の初期化
@@ -416,23 +414,38 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         // 親の起点を保存しておく
         var rootPos = element.parent().position();
 
+        var startPos = null;
         // 親（ホワイトボード上）でマウスを押下したときの処理
         element.parent().mousedown(function(event) {
+          startPos = { x: event.pageX - rootPos.left, y: event.pageY - rootPos.top };
           // 親のイベントから始まった時
           if(element.parent()[0] === event.target) {
             scope.$apply(function() {
-              scope.selectField.x = event.pageX - rootPos.left;
-              scope.selectField.y = event.pageY - rootPos.top;
+              scope.show               = true;
+              scope.selectField.x      = event.pageX - rootPos.left;
+              scope.selectField.y      = event.pageY - rootPos.top;
+              scope.selectField.width  = 0;
+              scope.selectField.height = 0;
             });
           }
         });
-        // ドラッグによるサイズの変更
-        scope.DragManager.setDragMode(element.parent(), function(dx, dy) {
+        $(window).mousemove(function(event) {
+          // 開始座標が無いときはスキップ
+          if(!startPos) return;
+
+          var pos = { x: event.pageX - rootPos.left, y: event.pageY - rootPos.top };
           scope.$apply(function() {
-            scope.selectField.width  += dx;
-            scope.selectField.height += dy;
+            scope.selectField.x      = (startPos.x <= pos.x) ? startPos.x : pos.x;
+            scope.selectField.y      = (startPos.y <= pos.y) ? startPos.y : pos.y;
+            scope.selectField.width  = Math.abs(startPos.x - pos.x);
+            scope.selectField.height = Math.abs(startPos.y - pos.y);
+          })
+        });
+        $(window).mouseup(function(event) {
+          startPos = null;
+          scope.$apply(function() {
+            scope.show = false;
           });
-          return { x: 0, y: 0 };
         });
 
         // 変数が変化した時、CSSを変更する
