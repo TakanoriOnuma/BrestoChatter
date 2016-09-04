@@ -110,7 +110,6 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           // 余剰分を返す
           return offset;
         };
-        DragManager.addHandler(this.moveSelectedPostIts);
       }],
       link: function(scope, element, attrs, ctrl) {
         // ホワイトボードの基準座標を取得する
@@ -196,8 +195,12 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   })
   // ドラッグ移動を管理するファクトリー
   .factory('DragManager', function() {
-    var _handlers = [];
-    var _offsets  = [];
+    // 状態変数
+    var _pos        = null;           // クリックした座標
+    var _isDragged  = false;          // マウスを押下した後動かしたかのフラグ
+    var _dragObjs   = new WeakMap();  // 登録オブジェクト（エレメントをキーにするためWeakMap）
+    var _doHandlers = [];             // 実行関数
+    var _offsets    = [];             // 移動しきれなかったオフセット
     var _dragProcess = function(dx, dy) {
       // 1つ1つハンドラーを実行していく
       for(var i = 0; i < _doHandlers.length; i++) {
@@ -227,11 +230,6 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         }
       }
     };
-    // 状態変数
-    var _pos       = null;
-    var _isDragged = false;
-    var _dragObjs  = new WeakMap();   // 登録オブジェクト（エレメントをキーにするためWeakMap）
-    var _doHandlers = [];             // 実行関数
     $(window)
       .mousedown(function(event) {
         _isDragged = false;
@@ -250,11 +248,6 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         _doHandlers = [];
       });
     return {
-      // func(dx, dy)を実行させる関数をセット
-      addHandler: function(handler) {
-        _handlers.push(handler);
-        _offsets.push({ x: 0, y: 0 });
-      },
       // 渡したエレメントのドラッグを検知するよう登録する
       // handlerはfunc(dx, dy)->offset({x, y})の処理を行う関数
       // ※同じエレメントに何回も登録できると見せかけて
@@ -266,27 +259,18 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
 
           if(!_dragObjs.has($e)) {
             _dragObjs.set($e, {
-              offset     : { x: 0, y: 0 },
-              isDragged  : false,
-              handlers   : []
+              handlers : []
             });
           }
           _dragObjs.get($e).handlers.push(handler);
           // $elemにイベントを追加
           $elem.mousedown(function(event) {
-            console.log($e, event.target);
             // イベントが自分自身からの時
             if($e === event.target) {
               _pos = { x: event.pageX, y: event.pageY };
-              _doHandlers = _doHandlers.concat(_dragObjs.get($e).handlers);
-              console.log(_doHandlers);
+              _doHandlers = _dragObjs.get($e).handlers;
             }
-            console.log(_dragObjs);
           });
-          // ドラッグされたかのチェック関数を$eに登録する
-          $elem.isDragged = function() {
-            return _dragObjs.get($e).isDragged;
-          }
         }
       },
       // ドラッグが行われたかチェック
