@@ -56,7 +56,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         members : '=',
         user    : '='
       },
-      template: '<div class="my-whiteboard" ng-click="reset()">' +
+      template: '<div class="my-whiteboard">' +
                 '  <span>ホワイトボード</span>' +
                 '  <my-post-it ng-repeat="postIt in postIts" post-it="postIt">' +
                 '  </my-post-it>' +
@@ -110,6 +110,27 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           // 余剰分を返す
           return offset;
         };
+
+        // 選択領域の監視を行う
+        $scope.$watch('selField', function(newValue, oldValue, scope) {
+          // よく分かんないけど他の場所で$applyをやっているためここでする必要はない
+          //$scope.$apply(function() {
+            for(var i = 0; i < $scope.postIts.length; i++) {
+              var postIt = $scope.postIts[i];
+              // selFieldの内部かチェック
+              if(postIt.position.x >= $scope.selField.x &&
+                 postIt.position.y >= $scope.selField.y &&
+                 postIt.position.x + postIt.width  <= $scope.selField.x + $scope.selField.width &&
+                 postIt.position.y + postIt.height <= $scope.selField.y + $scope.selField.height)
+              {
+                postIt.selected = true;
+              }
+              else {
+                postIt.selected = false;
+              }
+            }
+          //});
+        }, true);
       }],
       link: function(scope, element, attrs, ctrl) {
         // ホワイトボードの基準座標を取得する
@@ -300,6 +321,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         // モデル値を初期化する
         scope.postIt.selected = false;
         scope.postIt.editable = false;
+        // 応急処置（本来はDBに持っておくべき）
+        scope.postIt.width  = 100;
+        scope.postIt.height = 100;
         // このタグをドラッグ移動できるようマネージャーに登録する
         scope.DragManager.setDragMode(element, ctrl.moveSelectedPostIts);
 
@@ -417,9 +441,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         var startPos = null;
         // 親（ホワイトボード上）でマウスを押下したときの処理
         element.parent().mousedown(function(event) {
-          startPos = { x: event.pageX - rootPos.left, y: event.pageY - rootPos.top };
           // 親のイベントから始まった時
           if(element.parent()[0] === event.target) {
+            startPos = { x: event.pageX - rootPos.left, y: event.pageY - rootPos.top };
             scope.$apply(function() {
               scope.show               = true;
               scope.selectField.x      = event.pageX - rootPos.left;
