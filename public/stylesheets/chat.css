@@ -2,6 +2,13 @@
   width: 80%;
 }
 
+.unselect {
+  user-select: none;         /* CSS3 */
+  -moz-user-select: none;    /* Firefox */
+  -webkit-user-select: none; /* Safari、Chromeなど */
+  -ms-user-select: none;     /* IE10かららしい */
+}
+
 .my-chat-list {
   height: 200px;
   border: solid #000 1px;
@@ -26,6 +33,7 @@
   background-color: #ffa;
   position: absolute;
   overflow: hidden;
+  cursor: default;
 }
 
 .my-post-it-selected {
@@ -35,4 +43,10 @@
 
 .my-cursor {
   position: absolute;
+}
+
+.my-select-field {
+  position: absolute;
+  border: solid #00f 1px;
+  background-color: rgba(0, 0, 255, 0.2);
 }
