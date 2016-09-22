@@ -486,6 +486,41 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       }
     }
   })
+  // オリジナルの矢印図形を表示するディレクティブ
+  .directive('myArrow', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        number : '=',
+        flag   : '=',
+        text   : '@',
+        width  : '='
+      },
+      template: '<svg viewBox="0 0 {{width}} 40" style="position: absolute; left: {{185 * number}}px">' +
+                '  <path ng-class="{\'svg-orange\': flag, \'svg-green\': !flag}" d="M 1 1 L {{width - 25}} 1 L {{width - 1}} 20 L {{width - 25}} 39 L 1 39 L 24 20 z" stroke-width="1" />' +
+                '  <g font-family="sans-serif" font-size="20">' +
+                '    <text x="{{width / 2}}" y="22" fill="white" text-anchor="middle" dominant-baseline="middle">{{text}}</text>' +
+                '  </g>' +
+                '</svg>'
+    }
+  })
+  // スケジュール管理ディレクティブ
+  .directive('mySchedule', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        schedule: '='
+      },
+      template: '<div style="position: relative; border: solid 1px black; height: 40px">' +
+                '  <my-arrow ng-repeat="section in schedule track by $index" number="$index" text="{{section.name}}" flag="section.selected" width="200"></my-section>' +
+                '</div>',
+      link: function(scope, element, attrs) {
+
+      }
+    }
+  })
   .service('ChatService', ['$http', function($http) {
     // データリストを取得する
     this.getDataList = function(url) {
@@ -507,6 +542,14 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   // メインコントローラー
   .controller('MyController', ['$scope', '$timeout', '$filter', 'ChatService', 'WebSocket',
   function($scope, $timeout, $filter, ChatService, WebSocket) {
+    // スケジュールを取りあえず初期化
+    $scope.schedule = [
+      { name : 'アイデア出し', time : 10, selected : true },
+      { name : 'アイデア発散', time : 10, selected : false },
+      { name : 'グルーピング', time : 10, selected : false },
+      { name : '議論', time : 10, selected : false }
+    ];
+
     // 参照できるようにあらかじめ初期化する
     $scope.chat = {
       message:  ''

@@ -3,7 +3,8 @@ extends ../../layout
 block content
   table(border='1', width='100%')
     tr
-      td(colspan='2') スケジュール
+      td(colspan='2')
+        my-schedule(schedule='schedule')
     tr
       //- こっちにheightを書かないとブラウザの互換性を保てない（Chromeとfirefoxにおいては）
       td(colspan='2', height='300px')
