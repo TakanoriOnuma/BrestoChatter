@@ -494,23 +494,23 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         color  : '@',
         text   : '@',
-        width  : '='
+        width  : '@'
       },
       template: '<svg>' +
                 '  <path ng-class="\'svg-\' + color" stroke-width="1" />' +
-                '  <g font-family="sans-serif" font-size="20">' +
-                '    <text y="22" fill="white" text-anchor="middle" dominant-baseline="middle">{{text}}</text>' +
+                '  <g font-family="sans-serif" font-size="16">' +
+                '    <text y="17" fill="white" text-anchor="middle" dominant-baseline="middle">{{text}}</text>' +
                 '  </g>' +
                 '</svg>',
       link: function(scope, element, attrs) {
         // angularで上手く設定できないものは、jQueryで強制的に設定する
         element.attr('viewBox', '0 0 {0} 40'.replace('{0}', scope.width));
         var path = 'M 1 1 ' +
-                   'L {0} 1 '.replace('{0}', scope.width - 25) +
-                   'L {0} 20 '.replace('{0}', scope.width - 1) +
-                   'L {0} 39 '.replace('{0}', scope.width - 25) +
-                   'L 1 39 ' +
-                   'L 24 20 ' +
+                   'L {0} 1 '.replace('{0}', scope.width - 20) +
+                   'L {0} 15 '.replace('{0}', scope.width - 1) +
+                   'L {0} 29 '.replace('{0}', scope.width - 20) +
+                   'L 1 29 ' +
+                   'L 19 15 ' +
                    'z';
         element.find('path').attr('d', path);
         element.find('text').attr('x', scope.width / 2);
@@ -525,16 +525,24 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         schedule: '='
       },
-      template: '<div style="position: relative; border: solid 1px black; height: 40px">' +
+      template: '<div style="position: relative; height: 30px">' +
                 '  <my-arrow ng-repeat="section in schedule track by $index"' +
-                '            text="{{section.name}}" color="{{section.color}}" width="200" style="position: absolute; left: {{185 * $index}}px">' +
-                '  </my-section>' +
+                '            text="{{section.name}}" color="{{section.color}}" width="{{section.width}}" style="position: absolute; left: {{section.left}}px">' +
+                '  </my-arrow>' +
                 '</div>',
       link: function(scope, element, attrs) {
         // scope変数の初期化
+        var totalTime = 0;
         for(var i = 0; i < scope.schedule.length; i++) {
           scope.schedule[i].color    = 'gray';
           scope.schedule[i].selected = false;
+          totalTime += scope.schedule[i].time;
+        }
+        // 幅の設定
+        var width = element.width() + 15 * (scope.schedule.length - 1);
+        for(var i = 0; i < scope.schedule.length; i++) {
+          scope.schedule[i].width = Math.round(width * scope.schedule[i].time / totalTime);
+          scope.schedule[i].left  = (i === 0) ? 0 : scope.schedule[i - 1].left + scope.schedule[i - 1].width - 15;
         }
       }
     }
@@ -563,9 +571,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
     // スケジュールを取りあえず初期化
     $scope.schedule = [
       { name : 'アイデア出し', time : 10 },
-      { name : 'アイデア発散', time : 10 },
-      { name : 'グルーピング', time : 10 },
-      { name : '議論', time : 10 }
+      { name : 'アイデア発散', time : 20 },
+      { name : 'グルーピング', time : 30 },
+      { name : '議論', time : 40 }
     ];
 
     // 参照できるようにあらかじめ初期化する
