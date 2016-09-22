@@ -497,12 +497,25 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         text   : '@',
         width  : '='
       },
-      template: '<svg viewBox="0 0 {{width}} 40" style="position: absolute; left: {{185 * number}}px">' +
-                '  <path ng-class="{\'svg-orange\': flag, \'svg-green\': !flag}" d="M 1 1 L {{width - 25}} 1 L {{width - 1}} 20 L {{width - 25}} 39 L 1 39 L 24 20 z" stroke-width="1" />' +
+      template: '<svg style="position: absolute; left: {{185 * number}}px">' +
+                '  <path ng-class="{\'svg-orange\': flag, \'svg-green\': !flag}" stroke-width="1" />' +
                 '  <g font-family="sans-serif" font-size="20">' +
-                '    <text x="{{width / 2}}" y="22" fill="white" text-anchor="middle" dominant-baseline="middle">{{text}}</text>' +
+                '    <text y="22" fill="white" text-anchor="middle" dominant-baseline="middle">{{text}}</text>' +
                 '  </g>' +
-                '</svg>'
+                '</svg>',
+      link: function(scope, element, attrs) {
+        // angularで上手く設定できないものは、jQueryで強制的に設定する
+        element.attr('viewBox', '0 0 {0} 40'.replace('{0}', scope.width));
+        var path = 'M 1 1 ' +
+                   'L {0} 1 '.replace('{0}', scope.width - 25) +
+                   'L {0} 20 '.replace('{0}', scope.width - 1) +
+                   'L {0} 39 '.replace('{0}', scope.width - 25) +
+                   'L 1 39 ' +
+                   'L 24 20 ' +
+                   'z';
+        element.find('path').attr('d', path);
+        element.find('text').attr('x', scope.width / 2);
+      }
     }
   })
   // スケジュール管理ディレクティブ
