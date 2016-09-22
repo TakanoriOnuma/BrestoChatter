@@ -492,13 +492,12 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       restrict: 'E',
       replace: true,
       scope: {
-        number : '=',
-        flag   : '=',
+        color  : '@',
         text   : '@',
         width  : '='
       },
-      template: '<svg style="position: absolute; left: {{185 * number}}px">' +
-                '  <path ng-class="{\'svg-orange\': flag, \'svg-green\': !flag}" stroke-width="1" />' +
+      template: '<svg>' +
+                '  <path ng-class="\'svg-\' + color" stroke-width="1" />' +
                 '  <g font-family="sans-serif" font-size="20">' +
                 '    <text y="22" fill="white" text-anchor="middle" dominant-baseline="middle">{{text}}</text>' +
                 '  </g>' +
@@ -527,10 +526,16 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         schedule: '='
       },
       template: '<div style="position: relative; border: solid 1px black; height: 40px">' +
-                '  <my-arrow ng-repeat="section in schedule track by $index" number="$index" text="{{section.name}}" flag="section.selected" width="200"></my-section>' +
+                '  <my-arrow ng-repeat="section in schedule track by $index"' +
+                '            text="{{section.name}}" color="{{section.color}}" width="200" style="position: absolute; left: {{185 * $index}}px">' +
+                '  </my-section>' +
                 '</div>',
       link: function(scope, element, attrs) {
-
+        // scope変数の初期化
+        for(var i = 0; i < scope.schedule.length; i++) {
+          scope.schedule[i].color    = 'gray';
+          scope.schedule[i].selected = false;
+        }
       }
     }
   })
@@ -557,10 +562,10 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   function($scope, $timeout, $filter, ChatService, WebSocket) {
     // スケジュールを取りあえず初期化
     $scope.schedule = [
-      { name : 'アイデア出し', time : 10, selected : true },
-      { name : 'アイデア発散', time : 10, selected : false },
-      { name : 'グルーピング', time : 10, selected : false },
-      { name : '議論', time : 10, selected : false }
+      { name : 'アイデア出し', time : 10 },
+      { name : 'アイデア発散', time : 10 },
+      { name : 'グルーピング', time : 10 },
+      { name : '議論', time : 10 }
     ];
 
     // 参照できるようにあらかじめ初期化する
