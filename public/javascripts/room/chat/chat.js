@@ -525,9 +525,10 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         schedule: '='
       },
-      template: '<div style="position: relative; height: 30px">' +
+      template: '<div style="position: relative; height: 50px">' +
+                '  <my-time-line sections="schedule" width="{{fieldWidth}}" height="20" style="position: absolute; top: 0px; left: 10px"></my-time-line>' +
                 '  <my-arrow ng-repeat="section in schedule track by $index"' +
-                '            text="{{section.name}}" color="{{section.color}}" width="{{section.width}}" style="position: absolute; left: {{section.left}}px">' +
+                '            text="{{section.name}}" color="{{section.color}}" width="{{section.width}}" style="position: absolute; left: {{section.left + 10}}px; top: 20px">' +
                 '  </my-arrow>' +
                 '</div>',
       link: function(scope, element, attrs) {
@@ -539,12 +540,28 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           totalTime += scope.schedule[i].time;
         }
         // 幅の設定
-        var width = element.width() + 15 * (scope.schedule.length - 1);
+        scope.fieldWidth = element.width() - 20;
+        var width = scope.fieldWidth + 15 * (scope.schedule.length - 1);
         for(var i = 0; i < scope.schedule.length; i++) {
           scope.schedule[i].width = Math.round(width * scope.schedule[i].time / totalTime);
           scope.schedule[i].left  = (i === 0) ? 0 : scope.schedule[i - 1].left + scope.schedule[i - 1].width - 15;
         }
       }
+    }
+  })
+  // タイムラインを表示するディレクティブ
+  .directive('myTimeLine', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        width    : '@',
+        height   : '@',
+        sections : '='
+      },
+      template: '<div style="width: {{width}}px; height: {{height}}px; border-bottom: solid 1px black">' +
+                '  <div ng-repeat="section in sections track by $index" style="position: absolute; left: {{section.left + section.width - 20}}px; white-space: nowrap">{{section.time}}分</div>' +
+                '</div>'
     }
   })
   .service('ChatService', ['$http', function($http) {
