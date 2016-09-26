@@ -561,6 +561,31 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       },
       template: '<div style="width: {{width}}px; height: {{height}}px; border-bottom: solid 1px black">' +
                 '  <div ng-repeat="section in sections track by $index" style="position: absolute; left: {{section.left + section.width - 20}}px; white-space: nowrap">{{section.time}}分</div>' +
+                '  <my-time-cursor cursor="0"></my-time-cursor>' +
+                '</div>'
+    }
+  })
+  // 時間を指し示すカーソル
+  .directive('myTimeCursor', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        cursor : '='
+      },
+      template: '<div class="triangle" style="position: absolute; left: {{cursor - 10}}px; top: 5px"></div>'
+    }
+  })
+  // スケジュール管理を操作するディレクティブ
+  .directive('myScheduleConfigure', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+      },
+      template: '<div>' +
+                '  <input type="button" value="開始"></input><br>' +
+                '  <span>残り○○秒</span>' +
                 '</div>'
     }
   })
