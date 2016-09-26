@@ -526,27 +526,38 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         schedule: '='
       },
       template: '<div style="position: relative; height: 50px">' +
-                '  <my-time-line sections="schedule" width="{{fieldWidth}}" height="20" style="position: absolute; top: 0px; left: 10px"></my-time-line>' +
+                '  <my-time-line cursor="cursor" sections="schedule" width="{{fieldWidth}}" height="20" style="position: absolute; top: 0px; left: 10px"></my-time-line>' +
                 '  <my-arrow ng-repeat="section in schedule track by $index"' +
                 '            text="{{section.name}}" color="{{section.color}}" width="{{section.width}}" style="position: absolute; left: {{section.left + 10}}px; top: 20px">' +
                 '  </my-arrow>' +
                 '</div>',
-      link: function(scope, element, attrs) {
+      controller: ['$scope', '$element', 'WebSocket', function($scope, $element, WebSocket) {
         // scope変数の初期化
-        var totalTime = 0;
-        for(var i = 0; i < scope.schedule.length; i++) {
-          scope.schedule[i].color    = 'gray';
-          scope.schedule[i].selected = false;
-          totalTime += scope.schedule[i].time;
+        $scope.cursor = 0;
+        $scope.totalTime = 0;
+        for(var i = 0; i < $scope.schedule.length; i++) {
+          $scope.schedule[i].color    = 'green';
+          $scope.schedule[i].selected = false;
+          $scope.totalTime += $scope.schedule[i].time;
         }
+        // スケジュールの最初が始めのセクションとして設定する
+        $scope.schedule[0].color    = 'orange';
+        $scope.schedule[0].selected = true;
         // 幅の設定
-        scope.fieldWidth = element.width() - 20;
-        var width = scope.fieldWidth + 15 * (scope.schedule.length - 1);
-        for(var i = 0; i < scope.schedule.length; i++) {
-          scope.schedule[i].width = Math.round(width * scope.schedule[i].time / totalTime);
-          scope.schedule[i].left  = (i === 0) ? 0 : scope.schedule[i - 1].left + scope.schedule[i - 1].width - 15;
+        $scope.fieldWidth = $element.width() - 20;
+        var width = $scope.fieldWidth + 15 * ($scope.schedule.length - 1);
+        for(var i = 0; i < $scope.schedule.length; i++) {
+          $scope.schedule[i].width = Math.round(width * $scope.schedule[i].time / $scope.totalTime);
+          $scope.schedule[i].left  = (i === 0) ? 0 : $scope.schedule[i - 1].left + $scope.schedule[i - 1].width - 15;
         }
-      }
+
+        // 経過時間通知イベントを受信した時
+        WebSocket.on('meeting-count', function(time) {
+          $scope.$apply(function() {
+            $scope.cursor = Math.round($scope.fieldWidth * time / $scope.totalTime);
+          });
+        })
+      }]
     }
   })
   // タイムラインを表示するディレクティブ
@@ -557,11 +568,12 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         width    : '@',
         height   : '@',
-        sections : '='
+        sections : '=',
+        cursor   : '='
       },
       template: '<div style="width: {{width}}px; height: {{height}}px; border-bottom: solid 1px black">' +
                 '  <div ng-repeat="section in sections track by $index" style="position: absolute; left: {{section.left + section.width - 20}}px; white-space: nowrap">{{section.time}}分</div>' +
-                '  <my-time-cursor cursor="0"></my-time-cursor>' +
+                '  <my-time-cursor cursor="cursor"></my-time-cursor>' +
                 '</div>'
     }
   })
@@ -584,9 +596,27 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
       },
       template: '<div>' +
-                '  <input type="button" value="開始"></input><br>' +
-                '  <span>残り○○秒</span>' +
-                '</div>'
+                '  <input type="button" value="開始" ng-click="start()"></input><br>' +
+                '  <span>残り{{last}}秒</span>' +
+                '</div>',
+      controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
+        // スコープ変数の初期化
+        $scope.last = 0;
+        $scope.start = function() {
+          console.log('start');
+          WebSocket.emit('meeting-start');
+          // 他の場所で反映させているようなので省略
+          //$scope.$apply(function() {
+            $scope.last = $scope.$parent.schedule[0].time;
+          //});
+        };
+        // 経過時間通知イベントを受信した時
+        WebSocket.on('meeting-count', function(time) {
+          $scope.$apply(function() {
+            $scope.last = $scope.$parent.schedule[0].time - time;
+          });
+        });
+      }]
     }
   })
   .service('ChatService', ['$http', function($http) {
