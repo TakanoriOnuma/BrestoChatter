@@ -596,20 +596,33 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
       },
       template: '<div>' +
-                '  <input type="button" value="開始" ng-click="start()"></input><br>' +
+                '  <input type="button" value="{{timerFlag ? \'停止\' : \'開始\'}}" ng-click="toggle()" style="width: 50px"></input><br>' +
                 '  <span>残り{{last}}秒</span>' +
                 '</div>',
       controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
         // スコープ変数の初期化
         $scope.last = 0;
-        $scope.start = function() {
-          console.log('start');
-          WebSocket.emit('meeting-start');
+        $scope.timerFlag = false;
+        $scope.toggle = function() {
+          WebSocket.emit('meeting-toggle');
           // 他の場所で反映させているようなので省略
           //$scope.$apply(function() {
-            $scope.last = $scope.$parent.schedule[0].time;
+            $scope.timerFlag = !$scope.timerFlag;
           //});
         };
+        // 時間開始イベントを受信した時
+        WebSocket.on('meeting-start', function(time) {
+          $scope.$apply(function() {
+            $scope.timerFlag = true;
+            $scope.last = $scope.$parent.schedule[0].time - time;
+          });
+        });
+        // 時間停止イベントを受信した時
+        WebSocket.on('meeting-stop', function() {
+          $scope.$apply(function() {
+            $scope.timerFlag = false;
+          });
+        });
         // 経過時間通知イベントを受信した時
         WebSocket.on('meeting-count', function(time) {
           $scope.$apply(function() {
