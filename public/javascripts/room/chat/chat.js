@@ -532,31 +532,38 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
                 '  </my-arrow>' +
                 '</div>',
       controller: ['$scope', '$element', 'WebSocket', function($scope, $element, WebSocket) {
-        // scope変数の初期化
-        $scope.cursor = 0;
-        $scope.totalTime = 0;
-        for(var i = 0; i < $scope.schedule.length; i++) {
-          $scope.schedule[i].color    = 'green';
-          $scope.schedule[i].selected = false;
-          $scope.totalTime += $scope.schedule[i].time;
-        }
-        // スケジュールの最初が始めのセクションとして設定する
-        $scope.schedule[0].color    = 'orange';
-        $scope.schedule[0].selected = true;
-        // 幅の設定
-        $scope.fieldWidth = $element.width() - 20;
-        var width = $scope.fieldWidth + 15 * ($scope.schedule.length - 1);
-        for(var i = 0; i < $scope.schedule.length; i++) {
-          $scope.schedule[i].width = Math.round(width * $scope.schedule[i].time / $scope.totalTime);
-          $scope.schedule[i].left  = (i === 0) ? 0 : $scope.schedule[i - 1].left + $scope.schedule[i - 1].width - 15;
-        }
+        $scope.$watchCollection('schedule', function(newValue, oldValue, scope) {
+          // データが取得できていない時は何もしない
+          if(newValue.length === 0) {
+            return;
+          }
 
-        // 経過時間通知イベントを受信した時
-        WebSocket.on('meeting-count', function(time) {
-          $scope.$apply(function() {
-            $scope.cursor = Math.round($scope.fieldWidth * time / $scope.totalTime);
+          // scope変数の初期化
+          $scope.cursor = 0;
+          $scope.totalTime = 0;
+          for(var i = 0; i < $scope.schedule.length; i++) {
+            $scope.schedule[i].color    = 'green';
+            $scope.schedule[i].selected = false;
+            $scope.totalTime += $scope.schedule[i].time;
+          }
+          // スケジュールの最初が始めのセクションとして設定する
+          $scope.schedule[0].color    = 'orange';
+          $scope.schedule[0].selected = true;
+          // 幅の設定
+          $scope.fieldWidth = $element.width() - 20;
+          var width = $scope.fieldWidth + 15 * ($scope.schedule.length - 1);
+          for(var i = 0; i < $scope.schedule.length; i++) {
+            $scope.schedule[i].width = Math.round(width * $scope.schedule[i].time / $scope.totalTime);
+            $scope.schedule[i].left  = (i === 0) ? 0 : $scope.schedule[i - 1].left + $scope.schedule[i - 1].width - 15;
+          }
+
+          // 経過時間通知イベントを受信した時
+          WebSocket.on('meeting-count', function(time) {
+            $scope.$apply(function() {
+              $scope.cursor = Math.round($scope.fieldWidth * time / $scope.totalTime);
+            });
           });
-        })
+        });
       }]
     }
   })
@@ -597,7 +604,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       },
       template: '<div>' +
                 '  <input type="button" value="{{timerFlag ? \'停止\' : \'開始\'}}" ng-click="toggle()" style="width: 50px"></input><br>' +
-                '  <span>残り{{last}}秒</span>' +
+                '  <span>残り{{last}}分</span>' +
                 '</div>',
       controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
         // スコープ変数の初期化
@@ -653,13 +660,8 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   // メインコントローラー
   .controller('MyController', ['$scope', '$timeout', '$filter', 'ChatService', 'WebSocket',
   function($scope, $timeout, $filter, ChatService, WebSocket) {
-    // スケジュールを取りあえず初期化
-    $scope.schedule = [
-      { name : 'アイデア出し', time : 10 },
-      { name : 'アイデア発散', time : 20 },
-      { name : 'グルーピング', time : 30 },
-      { name : '議論', time : 40 }
-    ];
+    // スケジュールを取得
+    $scope.schedule = ChatService.getDataList('./schedule');
 
     // 参照できるようにあらかじめ初期化する
     $scope.chat = {
