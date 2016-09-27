@@ -50,3 +50,18 @@
   border: solid #00f 1px;
   background-color: rgba(0, 0, 255, 0.2);
 }
+
+.svg-orange {
+  stroke: #a60;
+  fill:   #f90;
+}
+
+.svg-green {
+  stroke: #080;
+  fill:   #0b0;
+}
+
+.svg-gray {
+  stroke: #444;
+  fill:   #666;
+}

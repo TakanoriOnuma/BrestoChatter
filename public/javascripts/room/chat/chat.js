@@ -486,6 +486,159 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       }
     }
   })
+  // オリジナルの矢印図形を表示するディレクティブ
+  .directive('myArrow', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        color  : '@',
+        text   : '@',
+        width  : '@'
+      },
+      template: '<svg>' +
+                '  <path ng-class="\'svg-\' + color" stroke-width="1" />' +
+                '  <g font-family="sans-serif" font-size="16">' +
+                '    <text y="17" fill="white" text-anchor="middle" dominant-baseline="middle">{{text}}</text>' +
+                '  </g>' +
+                '</svg>',
+      link: function(scope, element, attrs) {
+        // angularで上手く設定できないものは、jQueryで強制的に設定する
+        element.attr('viewBox', '0 0 {0} 40'.replace('{0}', scope.width));
+        var path = 'M 1 1 ' +
+                   'L {0} 1 '.replace('{0}', scope.width - 20) +
+                   'L {0} 15 '.replace('{0}', scope.width - 1) +
+                   'L {0} 29 '.replace('{0}', scope.width - 20) +
+                   'L 1 29 ' +
+                   'L 19 15 ' +
+                   'z';
+        element.find('path').attr('d', path);
+        element.find('text').attr('x', scope.width / 2);
+      }
+    }
+  })
+  // スケジュール管理ディレクティブ
+  .directive('mySchedule', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        schedule: '='
+      },
+      template: '<div style="position: relative; height: 50px">' +
+                '  <my-time-line cursor="cursor" sections="schedule" width="{{fieldWidth}}" height="20" style="position: absolute; top: 0px; left: 10px"></my-time-line>' +
+                '  <my-arrow ng-repeat="section in schedule track by $index"' +
+                '            text="{{section.name}}" color="{{section.color}}" width="{{section.width}}" style="position: absolute; left: {{section.left + 10}}px; top: 20px">' +
+                '  </my-arrow>' +
+                '</div>',
+      controller: ['$scope', '$element', 'WebSocket', function($scope, $element, WebSocket) {
+        $scope.$watchCollection('schedule', function(newValue, oldValue, scope) {
+          // データが取得できていない時は何もしない
+          if(newValue.length === 0) {
+            return;
+          }
+
+          // scope変数の初期化
+          $scope.cursor = 0;
+          $scope.totalTime = 0;
+          for(var i = 0; i < $scope.schedule.length; i++) {
+            $scope.schedule[i].color    = 'green';
+            $scope.schedule[i].selected = false;
+            $scope.totalTime += $scope.schedule[i].time;
+          }
+          // スケジュールの最初が始めのセクションとして設定する
+          $scope.schedule[0].color    = 'orange';
+          $scope.schedule[0].selected = true;
+          // 幅の設定
+          $scope.fieldWidth = $element.width() - 20;
+          var width = $scope.fieldWidth + 15 * ($scope.schedule.length - 1);
+          for(var i = 0; i < $scope.schedule.length; i++) {
+            $scope.schedule[i].width = Math.round(width * $scope.schedule[i].time / $scope.totalTime);
+            $scope.schedule[i].left  = (i === 0) ? 0 : $scope.schedule[i - 1].left + $scope.schedule[i - 1].width - 15;
+          }
+
+          // 経過時間通知イベントを受信した時
+          WebSocket.on('meeting-count', function(time) {
+            $scope.$apply(function() {
+              $scope.cursor = Math.round($scope.fieldWidth * time / $scope.totalTime);
+            });
+          });
+        });
+      }]
+    }
+  })
+  // タイムラインを表示するディレクティブ
+  .directive('myTimeLine', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        width    : '@',
+        height   : '@',
+        sections : '=',
+        cursor   : '='
+      },
+      template: '<div style="width: {{width}}px; height: {{height}}px; border-bottom: solid 1px black">' +
+                '  <div ng-repeat="section in sections track by $index" style="position: absolute; left: {{section.left + section.width - 20}}px; white-space: nowrap">{{section.time}}分</div>' +
+                '  <my-time-cursor cursor="cursor"></my-time-cursor>' +
+                '</div>'
+    }
+  })
+  // 時間を指し示すカーソル
+  .directive('myTimeCursor', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        cursor : '='
+      },
+      template: '<div class="triangle" style="position: absolute; left: {{cursor - 10}}px; top: 5px"></div>'
+    }
+  })
+  // スケジュール管理を操作するディレクティブ
+  .directive('myScheduleConfigure', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+      },
+      template: '<div>' +
+                '  <input type="button" value="{{timerFlag ? \'停止\' : \'開始\'}}" ng-click="toggle()" style="width: 50px"></input><br>' +
+                '  <span>残り{{last}}分</span>' +
+                '</div>',
+      controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
+        // スコープ変数の初期化
+        $scope.last = 0;
+        $scope.timerFlag = false;
+        $scope.toggle = function() {
+          WebSocket.emit('meeting-toggle');
+          // 他の場所で反映させているようなので省略
+          //$scope.$apply(function() {
+            $scope.timerFlag = !$scope.timerFlag;
+          //});
+        };
+        // 時間開始イベントを受信した時
+        WebSocket.on('meeting-start', function(time) {
+          $scope.$apply(function() {
+            $scope.timerFlag = true;
+            $scope.last = $scope.$parent.schedule[0].time - time;
+          });
+        });
+        // 時間停止イベントを受信した時
+        WebSocket.on('meeting-stop', function() {
+          $scope.$apply(function() {
+            $scope.timerFlag = false;
+          });
+        });
+        // 経過時間通知イベントを受信した時
+        WebSocket.on('meeting-count', function(time) {
+          $scope.$apply(function() {
+            $scope.last = $scope.$parent.schedule[0].time - time;
+          });
+        });
+      }]
+    }
+  })
   .service('ChatService', ['$http', function($http) {
     // データリストを取得する
     this.getDataList = function(url) {
@@ -507,6 +660,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   // メインコントローラー
   .controller('MyController', ['$scope', '$timeout', '$filter', 'ChatService', 'WebSocket',
   function($scope, $timeout, $filter, ChatService, WebSocket) {
+    // スケジュールを取得
+    $scope.schedule = ChatService.getDataList('./schedule');
+
     // 参照できるようにあらかじめ初期化する
     $scope.chat = {
       message:  ''

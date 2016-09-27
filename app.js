@@ -72,9 +72,11 @@ mongoose.model('User', new mongoose.Schema({
 
 // Roomモデルの登録
 mongoose.model('Room', new mongoose.Schema({
-  title    : String,
-  author   : String,
-  password : String
+  title     : String,
+  author    : String,
+  password  : String,
+  objective : String,
+  schedule  : Object
 }));
 
 // catch 404 and forward to error handler

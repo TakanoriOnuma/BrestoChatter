@@ -2,14 +2,27 @@ extends ../../layout
 
 block content
   table(border='1', width='100%')
+    // 幅の設定
+    colgroup
+      col(span='1', style='width: 5%')
+      col(span='1', style='width: 10%')
+      col(span='1', style='width: 45%')
+      col(span='1', style='width: 25%')
+      col(span='1', style='width: 15%')
     tr
-      td(colspan='2') スケジュール
+      // ここにも幅の設定を書かないとChromeがおかしくなる
+      td(width='5%', align='center')
+        my-schedule-configure
+      td(colspan='3', width='80%')
+        my-schedule(schedule='schedule')
+      td(width='15%')
+        span Exitボタンとか
     tr
-      //- こっちにheightを書かないとブラウザの互換性を保てない（Chromeとfirefoxにおいては）
-      td(colspan='2', height='300px')
+      // こっちにheightを書かないとブラウザの互換性を保てない（Chromeとfirefoxにおいては）
+      td(colspan='5', height='300px')
         my-whiteboard.unselect(post-its='postIts', members='members', user='user')
     tr(height='300px')
-      td(width='60%', valign='top')
+      td(colspan='3', valign='top')
         uib-tabset
           uib-tab(index='0', heading='チャット')
             my-chat-list(chats='chats')
@@ -19,7 +32,7 @@ block content
               input(type='submit', value='送信')
           uib-tab(index='1', heading='ログ')
             span 音声通話などのログ
-      td(width='40%', valign='top')
+      td(colspan='2' valign='top')
         uib-tabset
           uib-tab(index='0', heading='メンバーリスト')
             ul(ng-cloak)

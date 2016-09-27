@@ -99,6 +99,8 @@ io.use(sharedsession(app.session));
 
 // 参加者
 var members = {};
+// 各部屋ごとのスケジュール状態
+var meeting = {};
 io.sockets.on('connection', function(socket) {
   // 接続idを確認
   console.log('connected', socket.id);
@@ -111,6 +113,10 @@ io.sockets.on('connection', function(socket) {
   if(!members[room._id]) {
     console.log('room created:', room._id);
     members[room._id] = [];
+    meeting[room._id] = {
+      timerId : null,
+      time    : 0
+    }
   }
 
   // roomIdのメンバーに参加する
@@ -136,6 +142,11 @@ io.sockets.on('connection', function(socket) {
     // 参加者が誰もいなくなったら削除する
     if(members[room._id].length === 0) {
       delete members[room._id];
+      // timerIdが残っていたら削除しておく
+      if(meeting[room._id].timerId !== null) {
+        clearInterval(meeting[room._id].timerId);
+      }
+      delete meeting[room._id];
     }
     console.log('now connections:', members);
   });
@@ -224,5 +235,54 @@ io.sockets.on('connection', function(socket) {
     }
     // 自分以外にカーソル移動イベントを送信する
     socket.broadcast.to(room._id).emit('cursor-move', userId, pos);
+  });
+
+  // ミーティング停止処理
+  var stopMeeting = function() {
+    // 最初から始まってない時は何もしない
+    if(meeting[room._id].timerId === null) {
+      return;
+    }
+
+    clearInterval(meeting[room._id].timerId);
+    meeting[room._id].timerId = null;
+
+    // 自分も含めて全員に停止を伝える
+    io.to(room._id).emit('meeting-stop');
+  }
+  // ミーティング開始処理
+  var startMeeting = function() {
+    // 既に始まっているときは何もしない
+    if(meeting[room._id].timerId !== null) {
+      return;
+    }
+
+    meeting[room._id].timerId = setInterval(function() {
+      // 自分も含めて経過時間を送る
+      meeting[room._id].time += 1;
+      io.to(room._id).emit('meeting-count', meeting[room._id].time);
+
+      // 10秒経ったら止める
+      if(meeting[room._id].time >= 10) {
+        stopMeeting();
+        meeting[room._id].time = 0;
+      }
+    }, 1000);
+
+    // 自分も含めて全員に開始を伝える
+    io.to(room._id).emit('meeting-start', meeting[room._id].time);
+  }
+  // ミーティング開始イベントを受信した時
+  socket.on('meeting-start', startMeeting);
+
+  // ミーティング時間のON／OFF
+  socket.on('meeting-toggle', function() {
+    // timerIdが無いときは開始処理、ある時は停止処理を行う
+    if(meeting[room._id].timerId === null) {
+      startMeeting();
+    }
+    else {
+      stopMeeting();
+    }
   });
 });

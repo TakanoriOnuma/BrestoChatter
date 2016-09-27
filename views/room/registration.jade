@@ -15,7 +15,22 @@ block content
         span(ng-message='required') 入力は必須です。
         span(ng-message='minlength') パスワードは4文字以上入力してください。
     div
-      span スケジュール(未実装)
+      label(for='objective') 目的：
+      select#objective(name='objective', ng-model='room.objective', ng-change='objectiveChanged()' required)
+        option(value='') 選択
+        option(value='out-ideas') アイデア出し
+        option(value='persue-ideas') アイデアを広げる
+      span(ng-messages='regForm.objective.$error', ng-cloak)
+        span(ng-message='required') 選択してください。
+    div
+      //- エラー未チェック
+      span スケジュール：
+      ol(ng-cloak)
+        li(ng-repeat='section in room.schedule track by $index')
+          input(type='text', ng-model='section.name')
+          span &nbsp;
+          input(type='text', ng-model='section.time', style='width: 30px; text-align: right')
+          span 分
     br
     input(type='submit', value='登録', ng-disabled='regForm.$invalid || regForm.$submitted')
 

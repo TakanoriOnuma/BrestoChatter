@@ -34,4 +34,10 @@ router.get('/post-its', sessionCheck.enterCheck, function(req, res) {
     });
 });
 
+// /scheduleにGETアクセスした時、scheduleを取得するAPI
+router.get('/schedule', sessionCheck.enterCheck, function(req, res) {
+  // セッションに記録されているscheduleを送信する
+  res.send(req.session.room.schedule);
+})
+
 module.exports = router;
