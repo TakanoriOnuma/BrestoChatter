@@ -547,11 +547,10 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
 
           // scope変数の初期化
           $scope.cursor = 0;
-          $scope.totalTime = 0;
           for(var i = 0; i < $scope.schedule.length; i++) {
             $scope.schedule[i].color = getColorName($scope.schedule[i].state);
-            $scope.totalTime += $scope.schedule[i].time;
           }
+          $scope.totalTime = $scope.schedule[$scope.schedule.length - 1].totalTime;
           // 幅の設定
           $scope.fieldWidth = $element.width() - 20;
           var width = $scope.fieldWidth + 15 * ($scope.schedule.length - 1);
@@ -582,7 +581,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         cursor   : '='
       },
       template: '<div style="width: {{width}}px; height: {{height}}px; border-bottom: solid 1px black">' +
-                '  <div ng-repeat="section in sections track by $index" style="position: absolute; left: {{section.left + section.width - 20}}px; white-space: nowrap">{{section.time}}分</div>' +
+                '  <div ng-repeat="section in sections track by $index" style="position: absolute; left: {{section.left + section.width - 30}}px; white-space: nowrap">{{section.totalTime}}分</div>' +
                 '  <my-time-cursor cursor="cursor"></my-time-cursor>' +
                 '</div>'
     }
