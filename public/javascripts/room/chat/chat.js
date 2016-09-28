@@ -538,6 +538,8 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           else if(state === 'finished') return 'gray';
           else                          return '';
         };
+        // scope変数の初期化
+        $scope.cursor = 0;
 
         $scope.$watchCollection('schedule', function(newValue, oldValue, scope) {
           // データが取得できていない時は何もしない
@@ -545,8 +547,6 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
             return;
           }
 
-          // scope変数の初期化
-          $scope.cursor = 0;
           for(var i = 0; i < $scope.schedule.length; i++) {
             $scope.schedule[i].color = getColorName($scope.schedule[i].state);
           }
@@ -623,7 +623,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         WebSocket.on('meeting-start', function(time) {
           $scope.$apply(function() {
             $scope.timerFlag = true;
-            $scope.last = $scope.$parent.schedule[0].time - time;
+            $scope.last = $scope.$parent.schedule[0].totalTime - time;
           });
         });
         // 時間停止イベントを受信した時
@@ -635,7 +635,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         // 経過時間通知イベントを受信した時
         WebSocket.on('meeting-count', function(time) {
           $scope.$apply(function() {
-            $scope.last = $scope.$parent.schedule[0].time - time;
+            $scope.last = $scope.$parent.schedule[0].totalTime - time;
           });
         });
       }]
