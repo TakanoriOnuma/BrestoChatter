@@ -120,16 +120,16 @@ io.sockets.on('connection', function(socket) {
       time     : 0,
       schedule : room.schedule
     }
-    // 各セクションのスケジュール状態を設定する
+    // 各セクションの初期設定する
     for(var i = 0; i < meeting[room._id].schedule.length; i++) {
+      // スケジュール状態を待機状態にする
       meeting[room._id].schedule[i].state = 'wait';
-    }
-    meeting[room._id].schedule[0].state = 'active';
-    // 各セクションまでにかかる時間を計算する
-    for(var i = 0; i < meeting[room._id].schedule.length; i++) {
+      // 各セクションまでにかかる時間を計算する
       meeting[room._id].schedule[i].totalTime = (i === 0) ? 0 : meeting[room._id].schedule[i - 1].totalTime;
       meeting[room._id].schedule[i].totalTime += meeting[room._id].schedule[i].time;
     }
+    // 最初のセクションのみアクティブにする
+    meeting[room._id].schedule[0].state = 'active';
   }
 
   // roomIdのメンバーに参加する
