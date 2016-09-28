@@ -182,8 +182,7 @@ io.sockets.on('connection', function(socket) {
       mongoose.model('PostIt').findById(postItIds[i], function(err, postIt) {
         // 文字列化して添え字番号を調べる（非同期なためループ変数iが使えない）
         var idx = postItIds.indexOf('' + postIt._id);
-        postIt.position.x = positions[idx].x;
-        postIt.position.y = positions[idx].y;
+        postIt.position = positions[idx];
         postIt.save(function(err) {
           if(err) {
             console.log(err);
