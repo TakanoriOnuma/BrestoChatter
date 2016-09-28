@@ -114,9 +114,14 @@ io.sockets.on('connection', function(socket) {
     console.log('room created:', room._id);
     members[room._id] = [];
     meeting[room._id] = {
-      timerId : null,
-      time    : 0
+      timerId  : null,
+      time     : 0,
+      schedule : room.schedule
     }
+    for(var i = 0; i < meeting[room._id].schedule.length; i++) {
+      meeting[room._id].schedule[i].state = 'wait';
+    }
+    meeting[room._id].schedule[0].state = 'active';
   }
 
   // roomIdのメンバーに参加する
@@ -127,6 +132,8 @@ io.sockets.on('connection', function(socket) {
   socket.broadcast.to(room._id).emit('join', user);
   // 自分に対してはroomIdのグループで今参加しているメンバーと自分の情報を通知する
   socket.emit('members', members[room._id], user);
+  // 自分に対してはスケジュールも送る
+  socket.emit('schedule', meeting[room._id].schedule);
 
   // 部屋から退出（接続が切れたとき）
   socket.on('disconnect', function() {

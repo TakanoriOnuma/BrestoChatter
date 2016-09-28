@@ -532,6 +532,13 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
                 '  </my-arrow>' +
                 '</div>',
       controller: ['$scope', '$element', 'WebSocket', function($scope, $element, WebSocket) {
+        var getColorName = function(state) {
+          if(state === 'active')        return 'orange';
+          else if(state === 'wait')     return 'green';
+          else if(state === 'finished') return 'gray';
+          else                          return '';
+        };
+
         $scope.$watchCollection('schedule', function(newValue, oldValue, scope) {
           // データが取得できていない時は何もしない
           if(newValue.length === 0) {
@@ -542,13 +549,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           $scope.cursor = 0;
           $scope.totalTime = 0;
           for(var i = 0; i < $scope.schedule.length; i++) {
-            $scope.schedule[i].color    = 'green';
-            $scope.schedule[i].selected = false;
+            $scope.schedule[i].color = getColorName($scope.schedule[i].state);
             $scope.totalTime += $scope.schedule[i].time;
           }
-          // スケジュールの最初が始めのセクションとして設定する
-          $scope.schedule[0].color    = 'orange';
-          $scope.schedule[0].selected = true;
           // 幅の設定
           $scope.fieldWidth = $element.width() - 20;
           var width = $scope.fieldWidth + 15 * ($scope.schedule.length - 1);
@@ -661,7 +664,12 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   .controller('MyController', ['$scope', '$timeout', '$filter', 'ChatService', 'WebSocket',
   function($scope, $timeout, $filter, ChatService, WebSocket) {
     // スケジュールを取得
-    $scope.schedule = ChatService.getDataList('./schedule');
+    $scope.schedule = [];
+    WebSocket.on('schedule', function(schedule) {
+      $scope.$apply(function() {
+        $scope.schedule = schedule;
+      });
+    });
 
     // 参照できるようにあらかじめ初期化する
     $scope.chat = {
