@@ -682,6 +682,22 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
             $scope.endTime = schedule[schedule.length - 1].totalTime;
             $scope.finFlag = true;
           }
+
+          // 通知メッセージを作成して、alertする
+          var finSection  = '';
+          var nextSection = '';
+          if(activeNum === 0) {
+            nextSection = '始めに' + schedule[activeNum].name + 'を行います。\n';
+          }
+          else if($scope.finFlag) {
+            finSection  = schedule[activeNum - 1].name + 'が終了しました。\n';
+            finSection += 'これでミーティングは終了です。\n';
+          }
+          else {
+            finSection  = schedule[activeNum - 1].name + 'が終了しました。\n';
+            nextSection = '次は' + schedule[activeNum].name + 'に移ります。\n';
+          }
+          window.alert(finSection + nextSection);
         });
       }]
     }
