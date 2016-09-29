@@ -628,7 +628,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
       },
       template: '<div>' +
-                '  <input type="button" value="{{timerFlag ? \'停止\' : \'開始\'}}" ng-click="toggle()" style="width: 50px"></input><br>' +
+                '  <input type="button" value="{{finFlag ? \'リセット\' : (timerFlag ? \'停止\' : \'開始\')}}" ng-click="toggle()" style="width: 55px"></input><br>' +
                 '  <span>残り{{last}}分</span>' +
                 '</div>',
       controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
@@ -636,7 +636,14 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         $scope.last      = 0;
         $scope.endTime   = 0;
         $scope.timerFlag = false;
+        $scope.finFlag   = false;
         $scope.toggle    = function() {
+          // 既に終了している場合はリセットを送信する
+          if($scope.finFlag) {
+            WebSocket.emit('meeting-reset');
+            return;
+          }
+
           WebSocket.emit('meeting-toggle');
           // 他の場所で反映させているようなので省略
           //$scope.$apply(function() {
@@ -665,8 +672,17 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         // アクティブセクションの通知を受信した時
         WebSocket.on('meeting-active-section', function(activeNum) {
           var schedule = $scope.$parent.schedule;
-          $scope.endTime = (activeNum < schedule.length) ? schedule[activeNum].totalTime : schedule[schedule.length - 1].totalTime;
-        })
+          // アクティブセクション番号がスケジュール配列の範囲内の時
+          if(activeNum < schedule.length) {
+            $scope.endTime = schedule[activeNum].totalTime;
+            $scope.finFlag = false;
+          }
+          // 範囲を超えた場合
+          else {
+            $scope.endTime = schedule[schedule.length - 1].totalTime;
+            $scope.finFlag = true;
+          }
+        });
       }]
     }
   })

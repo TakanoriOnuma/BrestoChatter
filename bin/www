@@ -280,6 +280,9 @@ io.sockets.on('connection', function(socket) {
       return;
     }
 
+    // 終了時間をセットする
+    meeting[room._id].endTime = meeting[room._id].schedule[meeting[room._id].activeNum].totalTime;
+
     // タイマーをセットする
     meeting[room._id].timerId = setInterval(function() {
       // 自分も含めて経過時間を送る
@@ -317,5 +320,16 @@ io.sockets.on('connection', function(socket) {
     else {
       stopMeeting();
     }
+  });
+  // ミーティングリセットイベントを受信した時
+  socket.on('meeting-reset', function() {
+    stopMeeting();
+
+    // 初期化を行ってから、自分も含めて全員に必要な情報を送る
+    meeting[room._id].time      = 0;
+    meeting[room._id].activeNum = 0;
+    // この順番で通知しないと更新後の表示が上手くいかない
+    io.to(room._id).emit('meeting-active-section', meeting[room._id].activeNum);
+    io.to(room._id).emit('meeting-count', meeting[room._id].time);
   });
 });
