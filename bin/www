@@ -113,10 +113,26 @@ io.sockets.on('connection', function(socket) {
   if(!members[room._id]) {
     console.log('room created:', room._id);
     members[room._id] = [];
+
+    // 会議情報を保持
     meeting[room._id] = {
-      timerId : null,
-      time    : 0
+      timerId   : null,             // 時間をカウントさせるタイマーID
+      time      : 0,                // 経過時間
+      schedule  : room.schedule,    // スケジュールリスト（参照コピーだがセッションには保存されない）
+      activeNum : 0,                // 今行われているセクション番号
     }
+    // 各セクションの初期設定する
+    for(var i = 0; i < meeting[room._id].schedule.length; i++) {
+      // スケジュール状態を待機状態にする
+      meeting[room._id].schedule[i].state = 'wait';
+      // 各セクションまでにかかる時間を計算する
+      meeting[room._id].schedule[i].totalTime = (i === 0) ? 0 : meeting[room._id].schedule[i - 1].totalTime;
+      meeting[room._id].schedule[i].totalTime += meeting[room._id].schedule[i].time;
+    }
+    // 最初のセクションのみアクティブにする
+    meeting[room._id].schedule[0].state = 'active';
+    // 終了時間を設定する
+    meeting[room._id].endTime = meeting[room._id].schedule[meeting[room._id].activeNum].totalTime;
   }
 
   // roomIdのメンバーに参加する
@@ -127,6 +143,10 @@ io.sockets.on('connection', function(socket) {
   socket.broadcast.to(room._id).emit('join', user);
   // 自分に対してはroomIdのグループで今参加しているメンバーと自分の情報を通知する
   socket.emit('members', members[room._id], user);
+  // 自分に対してはスケジュール、アクティブなセクション、経過時間も送る
+  socket.emit('schedule', meeting[room._id].schedule);
+  socket.emit('meeting-active-section', meeting[room._id].activeNum);
+  socket.emit('meeting-count', meeting[room._id].time);
 
   // 部屋から退出（接続が切れたとき）
   socket.on('disconnect', function() {
@@ -255,16 +275,33 @@ io.sockets.on('connection', function(socket) {
     if(meeting[room._id].timerId !== null) {
       return;
     }
+    // アクティブセクションがない時も何もしない
+    if(meeting[room._id].activeNum >= meeting[room._id].schedule.length) {
+      return;
+    }
 
+    // 終了時間をセットする
+    meeting[room._id].endTime = meeting[room._id].schedule[meeting[room._id].activeNum].totalTime;
+
+    // タイマーをセットする
     meeting[room._id].timerId = setInterval(function() {
       // 自分も含めて経過時間を送る
       meeting[room._id].time += 1;
       io.to(room._id).emit('meeting-count', meeting[room._id].time);
 
-      // 10秒経ったら止める
-      if(meeting[room._id].time >= 10) {
+      // 終了時間が来たら止める
+      if(meeting[room._id].time >= meeting[room._id].endTime) {
+        // アクティブなセクションを終了する
+        meeting[room._id].schedule[meeting[room._id].activeNum].state = 'finished';
+        // 次のセクションに進められるなら進める
+        meeting[room._id].activeNum += 1;
+        if(meeting[room._id].activeNum < meeting[room._id].schedule.length) {
+          meeting[room._id].schedule[meeting[room._id].activeNum].state = 'active';
+          meeting[room._id].endTime = meeting[room._id].schedule[meeting[room._id].activeNum].totalTime;
+        }
+        // アクティブなセクションを送る
+        io.to(room._id).emit('meeting-active-section', meeting[room._id].activeNum);
         stopMeeting();
-        meeting[room._id].time = 0;
       }
     }, 1000);
 
@@ -283,5 +320,16 @@ io.sockets.on('connection', function(socket) {
     else {
       stopMeeting();
     }
+  });
+  // ミーティングリセットイベントを受信した時
+  socket.on('meeting-reset', function() {
+    stopMeeting();
+
+    // 初期化を行ってから、自分も含めて全員に必要な情報を送る
+    meeting[room._id].time      = 0;
+    meeting[room._id].activeNum = 0;
+    // この順番で通知しないと更新後の表示が上手くいかない
+    io.to(room._id).emit('meeting-active-section', meeting[room._id].activeNum);
+    io.to(room._id).emit('meeting-count', meeting[room._id].time);
   });
 });

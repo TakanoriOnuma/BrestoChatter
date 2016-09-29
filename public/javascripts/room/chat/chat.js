@@ -532,23 +532,25 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
                 '  </my-arrow>' +
                 '</div>',
       controller: ['$scope', '$element', 'WebSocket', function($scope, $element, WebSocket) {
+        var getColorName = function(state) {
+          if(state === 'active')        return 'orange';
+          else if(state === 'wait')     return 'green';
+          else if(state === 'finished') return 'gray';
+          else                          return '';
+        };
+        // scope変数の初期化
+        $scope.cursor = 0;
+
         $scope.$watchCollection('schedule', function(newValue, oldValue, scope) {
           // データが取得できていない時は何もしない
           if(newValue.length === 0) {
             return;
           }
 
-          // scope変数の初期化
-          $scope.cursor = 0;
-          $scope.totalTime = 0;
           for(var i = 0; i < $scope.schedule.length; i++) {
-            $scope.schedule[i].color    = 'green';
-            $scope.schedule[i].selected = false;
-            $scope.totalTime += $scope.schedule[i].time;
+            $scope.schedule[i].color = getColorName($scope.schedule[i].state);
           }
-          // スケジュールの最初が始めのセクションとして設定する
-          $scope.schedule[0].color    = 'orange';
-          $scope.schedule[0].selected = true;
+          $scope.totalTime = $scope.schedule[$scope.schedule.length - 1].totalTime;
           // 幅の設定
           $scope.fieldWidth = $element.width() - 20;
           var width = $scope.fieldWidth + 15 * ($scope.schedule.length - 1);
@@ -562,6 +564,29 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
             $scope.$apply(function() {
               $scope.cursor = Math.round($scope.fieldWidth * time / $scope.totalTime);
             });
+          });
+        });
+
+        WebSocket.on('meeting-active-section', function(activeNum) {
+          $scope.$apply(function() {
+            // activeNumより前のセクションは灰色にする
+            var i = 0;
+            for( ; i < activeNum; i++) {
+              $scope.schedule[i].state = 'finished';
+            }
+            // i(=activeNum)がスケジュール配列を示しているならそこをアクティブにする
+            if(i < $scope.schedule.length) {
+              $scope.schedule[i].state = 'active';
+            }
+            // それより先のスケジュールは待機にする
+            for(i = i + 1; i < $scope.schedule.length; i++) {
+              $scope.schedule[i].state = 'wait';
+            }
+
+            // 色をセットする
+            for(i = 0; i < $scope.schedule.length; i++) {
+              $scope.schedule[i].color = getColorName($scope.schedule[i].state);
+            }
           });
         });
       }]
@@ -579,7 +604,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         cursor   : '='
       },
       template: '<div style="width: {{width}}px; height: {{height}}px; border-bottom: solid 1px black">' +
-                '  <div ng-repeat="section in sections track by $index" style="position: absolute; left: {{section.left + section.width - 20}}px; white-space: nowrap">{{section.time}}分</div>' +
+                '  <div ng-repeat="section in sections track by $index" style="position: absolute; left: {{section.left + section.width - 30}}px; white-space: nowrap">{{section.totalTime}}分</div>' +
                 '  <my-time-cursor cursor="cursor"></my-time-cursor>' +
                 '</div>'
     }
@@ -603,14 +628,22 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
       },
       template: '<div>' +
-                '  <input type="button" value="{{timerFlag ? \'停止\' : \'開始\'}}" ng-click="toggle()" style="width: 50px"></input><br>' +
+                '  <input type="button" value="{{finFlag ? \'リセット\' : (timerFlag ? \'停止\' : \'開始\')}}" ng-click="toggle()" style="width: 55px"></input><br>' +
                 '  <span>残り{{last}}分</span>' +
                 '</div>',
       controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
         // スコープ変数の初期化
-        $scope.last = 0;
+        $scope.last      = 0;
+        $scope.endTime   = 0;
         $scope.timerFlag = false;
-        $scope.toggle = function() {
+        $scope.finFlag   = false;
+        $scope.toggle    = function() {
+          // 既に終了している場合はリセットを送信する
+          if($scope.finFlag) {
+            WebSocket.emit('meeting-reset');
+            return;
+          }
+
           WebSocket.emit('meeting-toggle');
           // 他の場所で反映させているようなので省略
           //$scope.$apply(function() {
@@ -621,7 +654,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         WebSocket.on('meeting-start', function(time) {
           $scope.$apply(function() {
             $scope.timerFlag = true;
-            $scope.last = $scope.$parent.schedule[0].time - time;
+            $scope.last = $scope.endTime - time;
           });
         });
         // 時間停止イベントを受信した時
@@ -633,8 +666,38 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         // 経過時間通知イベントを受信した時
         WebSocket.on('meeting-count', function(time) {
           $scope.$apply(function() {
-            $scope.last = $scope.$parent.schedule[0].time - time;
+            $scope.last = $scope.endTime - time;
           });
+        });
+        // アクティブセクションの通知を受信した時
+        WebSocket.on('meeting-active-section', function(activeNum) {
+          var schedule = $scope.$parent.schedule;
+          // アクティブセクション番号がスケジュール配列の範囲内の時
+          if(activeNum < schedule.length) {
+            $scope.endTime = schedule[activeNum].totalTime;
+            $scope.finFlag = false;
+          }
+          // 範囲を超えた場合
+          else {
+            $scope.endTime = schedule[schedule.length - 1].totalTime;
+            $scope.finFlag = true;
+          }
+
+          // 通知メッセージを作成して、alertする
+          var finSection  = '';
+          var nextSection = '';
+          if(activeNum === 0) {
+            nextSection = '始めに' + schedule[activeNum].name + 'を行います。\n';
+          }
+          else if($scope.finFlag) {
+            finSection  = schedule[activeNum - 1].name + 'が終了しました。\n';
+            finSection += 'これでミーティングは終了です。\n';
+          }
+          else {
+            finSection  = schedule[activeNum - 1].name + 'が終了しました。\n';
+            nextSection = '次は' + schedule[activeNum].name + 'に移ります。\n';
+          }
+          window.alert(finSection + nextSection);
         });
       }]
     }
@@ -661,7 +724,12 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   .controller('MyController', ['$scope', '$timeout', '$filter', 'ChatService', 'WebSocket',
   function($scope, $timeout, $filter, ChatService, WebSocket) {
     // スケジュールを取得
-    $scope.schedule = ChatService.getDataList('./schedule');
+    $scope.schedule = [];
+    WebSocket.on('schedule', function(schedule) {
+      $scope.$apply(function() {
+        $scope.schedule = schedule;
+      });
+    });
 
     // 参照できるようにあらかじめ初期化する
     $scope.chat = {
