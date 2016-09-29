@@ -566,6 +566,29 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
             });
           });
         });
+
+        WebSocket.on('meeting-active-section', function(activeNum) {
+          $scope.$apply(function() {
+            // activeNumより前のセクションは灰色にする
+            var i = 0;
+            for( ; i < activeNum; i++) {
+              $scope.schedule[i].state = 'finished';
+            }
+            // i(=activeNum)がスケジュール配列を示しているならそこをアクティブにする
+            if(i < $scope.schedule.length) {
+              $scope.schedule[i].state = 'active';
+            }
+            // それより先のスケジュールは待機にする
+            for(i = i + 1; i < $scope.schedule.length; i++) {
+              $scope.schedule[i].state = 'wait';
+            }
+
+            // 色をセットする
+            for(i = 0; i < $scope.schedule.length; i++) {
+              $scope.schedule[i].color = getColorName($scope.schedule[i].state);
+            }
+          });
+        });
       }]
     }
   })
@@ -610,9 +633,10 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
                 '</div>',
       controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
         // スコープ変数の初期化
-        $scope.last = 0;
+        $scope.last      = 0;
+        $scope.endTime   = 0;
         $scope.timerFlag = false;
-        $scope.toggle = function() {
+        $scope.toggle    = function() {
           WebSocket.emit('meeting-toggle');
           // 他の場所で反映させているようなので省略
           //$scope.$apply(function() {
@@ -623,7 +647,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         WebSocket.on('meeting-start', function(time) {
           $scope.$apply(function() {
             $scope.timerFlag = true;
-            $scope.last = $scope.$parent.schedule[0].totalTime - time;
+            $scope.last = $scope.endTime - time;
           });
         });
         // 時間停止イベントを受信した時
@@ -635,9 +659,14 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         // 経過時間通知イベントを受信した時
         WebSocket.on('meeting-count', function(time) {
           $scope.$apply(function() {
-            $scope.last = $scope.$parent.schedule[0].totalTime - time;
+            $scope.last = $scope.endTime - time;
           });
         });
+        // アクティブセクションの通知を受信した時
+        WebSocket.on('meeting-active-section', function(activeNum) {
+          var schedule = $scope.$parent.schedule;
+          $scope.endTime = (activeNum < schedule.length) ? schedule[activeNum].totalTime : schedule[schedule.length - 1].totalTime;
+        })
       }]
     }
   })
