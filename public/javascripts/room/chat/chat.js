@@ -135,11 +135,55 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         }, true);
       }],
       link: function(scope, element, attrs, ctrl) {
-        // ホワイトボードの基準座標を取得する
-        var rootPos   = element.position();
-        rootPos.top  -= element.scrollTop();
-        rootPos.left -= element.scrollLeft();
+        // 基準座標
+        var rootPos = { top: 0, left: 0 };
+        // マウスが入った時とスクロール時に基準座標を変更する
+        element
+          .mouseenter(function() {
+            rootPos.top  = element.position().top  - element.scrollTop();
+            rootPos.left = element.position().left - element.scrollLeft();
+          })
+          .scroll(function() {
+            rootPos.top  = element.position().top  - element.scrollTop();
+            rootPos.left = element.position().left - element.scrollLeft();
+          });
 
+        // 選択されている付箋をIDリストで返す
+        var getSelectedPostItIds = function(postIts) {
+          var postItIds = []
+          for(var i = 0; i < postIts.length; i++) {
+            if(postIts[i].selected) {
+              postItIds.push(postIts[i]._id);
+            }
+          }
+          return postItIds;
+        };
+
+        // 付箋で設定できる色
+        var colorNames = [
+          { en: 'yellow', jp: '黄色' },
+          { en: 'blue',   jp: '青色' },
+          { en: 'green',  jp: '緑色' },
+          { en: 'pink',   jp: 'ピンク' },
+          { en: 'orange', jp: 'オレンジ' }
+        ];
+        // 1つの色選択メニューを返す関数を用いてループ変数を介在させないようにする
+        var createColorMenu = function(colorName) {
+          return {
+            name : colorName.jp,
+            img  : '/images/postItColor/{0}.png'.replace('{0}', colorName.en),
+            fun  : function() {
+              var postItIds = getSelectedPostItIds(scope.postIts);
+              // 色変更イベントをサーバーに送る
+              scope.WebSocket.emit('post-its-color-change', postItIds, colorName.en);
+            }
+          }
+        }
+        // 色選択メニューをループを使って指定する
+        var colorMenu = [];
+        for(var i = 0; i < colorNames.length; i++) {
+          colorMenu.push(createColorMenu(colorNames[i]));
+        }
         // コンテキストメニューを作成する
         var menu = [
           {
@@ -155,16 +199,16 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
             }
           },
           {
+            name    : '色の変更',
+            title   : '選択した付箋の色を変更します。',
+            subMenu : colorMenu
+          },
+          {
             name  : '削除',
             title : '選択した付箋を削除します。',
             fun   : function() {
               if(window.confirm('選択した付箋を削除してもよろしいですか？')) {
-                var delPostItIds = [];
-                for(var i = 0; i < scope.postIts.length; i++) {
-                  if(scope.postIts[i].selected) {
-                    delPostItIds.push(scope.postIts[i]._id);
-                  }
-                }
+                var delPostItIds = getSelectedPostItIds(scope.postIts);
                 // 付箋削除イベントをサーバーに送る
                 scope.WebSocket.emit('post-it-delete', delPostItIds);
               }
@@ -206,6 +250,10 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
 
         // ホワイトボード上で移動している時の処理
         element.mousemove(function(event) {
+          // user情報がまだ読み込めてない時はスキップ
+          if(typeof scope.user === 'undefined') {
+            return;
+          }
           // カーソルの移動をサーバーに送る
           var pos = {
             x: event.pageX - rootPos.left,
@@ -311,7 +359,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         postIt : '='
       },
-      template: '<div class="my-post-it" ng-class="{ \'my-post-it-selected\': postIt.selected }">' +
+      template: '<div class="my-post-it my-post-it-{{postIt.colorName}}" ng-class="{ \'my-post-it-selected\': postIt.selected }">' +
                 '  <span ng-bind-html="postIt.message | nl2br"></span>' +
                 '</div>',
       controller: ['$scope', 'WebSocket', 'DragManager', function($scope, WebSocket, DragManager) {
@@ -437,8 +485,18 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         // スコープ変数の初期化
         scope.show = false;
 
-        // 親の起点を保存しておく
-        var rootPos = element.parent().position();
+        // 基準座標
+        var rootPos = { top: 0, left: 0 };
+        // マウスが入った時とスクロール時に基準座標を変更する
+        element.parent()
+          .mouseenter(function() {
+            rootPos.top  = element.parent().position().top  - element.parent().scrollTop();
+            rootPos.left = element.parent().position().left - element.parent().scrollLeft();
+          })
+          .scroll(function() {
+            rootPos.top  = element.parent().position().top  - element.parent().scrollTop();
+            rootPos.left = element.parent().position().left - element.parent().scrollLeft();
+          });
 
         var startPos = null;
         // 親（ホワイトボード上）でマウスを押下したときの処理
@@ -486,6 +544,222 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       }
     }
   })
+  // オリジナルの矢印図形を表示するディレクティブ
+  .directive('myArrow', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        color  : '@',
+        text   : '@',
+        width  : '@'
+      },
+      template: '<svg>' +
+                '  <path ng-class="\'svg-\' + color" stroke-width="1" />' +
+                '  <g font-family="sans-serif" font-size="16">' +
+                '    <text y="17" fill="white" text-anchor="middle" dominant-baseline="middle">{{text}}</text>' +
+                '  </g>' +
+                '</svg>',
+      link: function(scope, element, attrs) {
+        // angularで上手く設定できないものは、jQueryで強制的に設定する
+        element.attr('viewBox', '0 0 {0} 40'.replace('{0}', scope.width));
+        var path = 'M 1 1 ' +
+                   'L {0} 1 '.replace('{0}', scope.width - 20) +
+                   'L {0} 15 '.replace('{0}', scope.width - 1) +
+                   'L {0} 29 '.replace('{0}', scope.width - 20) +
+                   'L 1 29 ' +
+                   'L 19 15 ' +
+                   'z';
+        element.find('path').attr('d', path);
+        element.find('text').attr('x', scope.width / 2);
+      }
+    }
+  })
+  // スケジュール管理ディレクティブ
+  .directive('mySchedule', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        schedule: '='
+      },
+      template: '<div style="position: relative; height: 50px">' +
+                '  <my-time-line cursor="cursor" sections="schedule" width="{{fieldWidth}}" height="20" style="position: absolute; top: 0px; left: 10px"></my-time-line>' +
+                '  <my-arrow ng-repeat="section in schedule track by $index"' +
+                '            text="{{section.name}}" color="{{section.color}}" width="{{section.width}}" style="position: absolute; left: {{section.left + 10}}px; top: 20px">' +
+                '  </my-arrow>' +
+                '</div>',
+      controller: ['$scope', '$element', 'WebSocket', function($scope, $element, WebSocket) {
+        var getColorName = function(state) {
+          if(state === 'active')        return 'orange';
+          else if(state === 'wait')     return 'green';
+          else if(state === 'finished') return 'gray';
+          else                          return '';
+        };
+        // scope変数の初期化
+        $scope.cursor = 0;
+
+        $scope.$watchCollection('schedule', function(newValue, oldValue, scope) {
+          // データが取得できていない時は何もしない
+          if(newValue.length === 0) {
+            return;
+          }
+
+          for(var i = 0; i < $scope.schedule.length; i++) {
+            $scope.schedule[i].color = getColorName($scope.schedule[i].state);
+          }
+          $scope.totalTime = $scope.schedule[$scope.schedule.length - 1].totalTime;
+          // 幅の設定
+          $scope.fieldWidth = $element.width() - 20;
+          var width = $scope.fieldWidth + 15 * ($scope.schedule.length - 1);
+          for(var i = 0; i < $scope.schedule.length; i++) {
+            $scope.schedule[i].width = Math.round(width * $scope.schedule[i].time / $scope.totalTime);
+            $scope.schedule[i].left  = (i === 0) ? 0 : $scope.schedule[i - 1].left + $scope.schedule[i - 1].width - 15;
+          }
+
+          // 経過時間通知イベントを受信した時
+          WebSocket.on('meeting-count', function(time) {
+            $scope.$apply(function() {
+              $scope.cursor = Math.round($scope.fieldWidth * time / $scope.totalTime);
+            });
+          });
+        });
+
+        WebSocket.on('meeting-active-section', function(activeNum) {
+          $scope.$apply(function() {
+            // activeNumより前のセクションは灰色にする
+            var i = 0;
+            for( ; i < activeNum; i++) {
+              $scope.schedule[i].state = 'finished';
+            }
+            // i(=activeNum)がスケジュール配列を示しているならそこをアクティブにする
+            if(i < $scope.schedule.length) {
+              $scope.schedule[i].state = 'active';
+            }
+            // それより先のスケジュールは待機にする
+            for(i = i + 1; i < $scope.schedule.length; i++) {
+              $scope.schedule[i].state = 'wait';
+            }
+
+            // 色をセットする
+            for(i = 0; i < $scope.schedule.length; i++) {
+              $scope.schedule[i].color = getColorName($scope.schedule[i].state);
+            }
+          });
+        });
+      }]
+    }
+  })
+  // タイムラインを表示するディレクティブ
+  .directive('myTimeLine', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        width    : '@',
+        height   : '@',
+        sections : '=',
+        cursor   : '='
+      },
+      template: '<div style="width: {{width}}px; height: {{height}}px; border-bottom: solid 1px black">' +
+                '  <div ng-repeat="section in sections track by $index" style="position: absolute; left: {{section.left + section.width - 30}}px; white-space: nowrap">{{section.totalTime}}分</div>' +
+                '  <my-time-cursor cursor="cursor"></my-time-cursor>' +
+                '</div>'
+    }
+  })
+  // 時間を指し示すカーソル
+  .directive('myTimeCursor', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        cursor : '='
+      },
+      template: '<div class="triangle" style="position: absolute; left: {{cursor - 10}}px; top: 5px"></div>'
+    }
+  })
+  // スケジュール管理を操作するディレクティブ
+  .directive('myScheduleConfigure', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+      },
+      template: '<div>' +
+                '  <input type="button" value="{{finFlag ? \'リセット\' : (timerFlag ? \'停止\' : \'開始\')}}" ng-click="toggle()" style="width: 55px"></input><br>' +
+                '  <span>残り{{last}}分</span>' +
+                '</div>',
+      controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
+        // スコープ変数の初期化
+        $scope.last      = 0;
+        $scope.endTime   = 0;
+        $scope.timerFlag = false;
+        $scope.finFlag   = false;
+        $scope.toggle    = function() {
+          // 既に終了している場合はリセットを送信する
+          if($scope.finFlag) {
+            WebSocket.emit('meeting-reset');
+            return;
+          }
+
+          WebSocket.emit('meeting-toggle');
+          // 他の場所で反映させているようなので省略
+          //$scope.$apply(function() {
+            $scope.timerFlag = !$scope.timerFlag;
+          //});
+        };
+        // 時間開始イベントを受信した時
+        WebSocket.on('meeting-start', function(time) {
+          $scope.$apply(function() {
+            $scope.timerFlag = true;
+            $scope.last = $scope.endTime - time;
+          });
+        });
+        // 時間停止イベントを受信した時
+        WebSocket.on('meeting-stop', function() {
+          $scope.$apply(function() {
+            $scope.timerFlag = false;
+          });
+        });
+        // 経過時間通知イベントを受信した時
+        WebSocket.on('meeting-count', function(time) {
+          $scope.$apply(function() {
+            $scope.last = $scope.endTime - time;
+          });
+        });
+        // アクティブセクションの通知を受信した時
+        WebSocket.on('meeting-active-section', function(activeNum) {
+          var schedule = $scope.$parent.schedule;
+          // アクティブセクション番号がスケジュール配列の範囲内の時
+          if(activeNum < schedule.length) {
+            $scope.endTime = schedule[activeNum].totalTime;
+            $scope.finFlag = false;
+          }
+          // 範囲を超えた場合
+          else {
+            $scope.endTime = schedule[schedule.length - 1].totalTime;
+            $scope.finFlag = true;
+          }
+
+          // 通知メッセージを作成して、alertする
+          var finSection  = '';
+          var nextSection = '';
+          if(activeNum === 0) {
+            nextSection = '始めに' + schedule[activeNum].name + 'を行います。\n';
+          }
+          else if($scope.finFlag) {
+            finSection  = schedule[activeNum - 1].name + 'が終了しました。\n';
+            finSection += 'これでミーティングは終了です。\n';
+          }
+          else {
+            finSection  = schedule[activeNum - 1].name + 'が終了しました。\n';
+            nextSection = '次は' + schedule[activeNum].name + 'に移ります。\n';
+          }
+          window.alert(finSection + nextSection);
+        });
+      }]
+    }
+  })
   .service('ChatService', ['$http', function($http) {
     // データリストを取得する
     this.getDataList = function(url) {
@@ -507,6 +781,14 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   // メインコントローラー
   .controller('MyController', ['$scope', '$timeout', '$filter', 'ChatService', 'WebSocket',
   function($scope, $timeout, $filter, ChatService, WebSocket) {
+    // スケジュールを取得
+    $scope.schedule = [];
+    WebSocket.on('schedule', function(schedule) {
+      $scope.$apply(function() {
+        $scope.schedule = schedule;
+      });
+    });
+
     // 参照できるようにあらかじめ初期化する
     $scope.chat = {
       message:  ''
@@ -598,6 +880,18 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           postIt[0].message = message;
         });
       }
+    });
+
+    // 付箋の色変更イベントを受信した時
+    WebSocket.on('post-its-color-change', function(postItIds, colorName) {
+      $timeout(function() {
+        for(var i = 0; i < postItIds.length; i++) {
+          var postIt = $filter('filter')($scope.postIts, { _id : postItIds[i] });
+          if(postIt.length === 1) {
+            postIt[0].colorName = colorName;
+          }
+        }
+      })
     });
 
     // 付箋削除イベントを受信した時

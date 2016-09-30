@@ -58,9 +58,10 @@ mongoose.model('Chat', new mongoose.Schema({
 
 // PostItモデルの登録
 mongoose.model('PostIt', new mongoose.Schema({
-  roomId   : Object,
-  position : Object,
-  message  : String
+  roomId    : Object,
+  position  : Object,
+  message   : String,
+  colorName : { type: String, default: 'yellow' }
 }));
 
 // Userモデルの登録
@@ -72,9 +73,11 @@ mongoose.model('User', new mongoose.Schema({
 
 // Roomモデルの登録
 mongoose.model('Room', new mongoose.Schema({
-  title    : String,
-  author   : String,
-  password : String
+  title     : String,
+  author    : String,
+  password  : String,
+  objective : String,
+  schedule  : Object
 }));
 
 // catch 404 and forward to error handler
