@@ -206,6 +206,10 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
 
         // ホワイトボード上で移動している時の処理
         element.mousemove(function(event) {
+          // user情報がまだ読み込めてない時はスキップ
+          if(typeof scope.user === 'undefined') {
+            return;
+          }
           // カーソルの移動をサーバーに送る
           var pos = {
             x: event.pageX - rootPos.left,
