@@ -162,7 +162,10 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         // 付箋で設定できる色
         var colorNames = [
           { en: 'yellow', jp: '黄色' },
-          { en: 'blue',   jp: '青色' }
+          { en: 'blue',   jp: '青色' },
+          { en: 'green',  jp: '緑色' },
+          { en: 'pink',   jp: 'ピンク' },
+          { en: 'orange', jp: 'オレンジ' }
         ];
         // 1つの色選択メニューを返す関数を用いてループ変数を介在させないようにする
         var createColorMenu = function(colorName) {
@@ -196,7 +199,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           },
           {
             name    : '色の変更',
-            title   : '付箋の色を変更します。',
+            title   : '選択した付箋の色を変更します。',
             subMenu : colorMenu
           },
           {
