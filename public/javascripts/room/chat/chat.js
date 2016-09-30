@@ -171,6 +171,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         var createColorMenu = function(colorName) {
           return {
             name : colorName.jp,
+            img  : '/images/postItColor/{0}.png'.replace('{0}', colorName.en),
             fun  : function() {
               var postItIds = getSelectedPostItIds(scope.postIts);
               // 色変更イベントをサーバーに送る
