@@ -135,10 +135,18 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         }, true);
       }],
       link: function(scope, element, attrs, ctrl) {
-        // ホワイトボードの基準座標を取得する
-        var rootPos   = element.position();
-        rootPos.top  -= element.scrollTop();
-        rootPos.left -= element.scrollLeft();
+        // 基準座標
+        var rootPos = { top: 0, left: 0 };
+        // マウスが入った時とスクロール時に基準座標を変更する
+        element
+          .mouseenter(function() {
+            rootPos.top  = element.position().top  - element.scrollTop();
+            rootPos.left = element.position().left - element.scrollLeft();
+          })
+          .scroll(function() {
+            rootPos.top  = element.position().top  - element.scrollTop();
+            rootPos.left = element.position().left - element.scrollLeft();
+          });
 
         // コンテキストメニューを作成する
         var menu = [
@@ -441,8 +449,18 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         // スコープ変数の初期化
         scope.show = false;
 
-        // 親の起点を保存しておく
-        var rootPos = element.parent().position();
+        // 基準座標
+        var rootPos = { top: 0, left: 0 };
+        // マウスが入った時とスクロール時に基準座標を変更する
+        element.parent()
+          .mouseenter(function() {
+            rootPos.top  = element.parent().position().top  - element.parent().scrollTop();
+            rootPos.left = element.parent().position().left - element.parent().scrollLeft();
+          })
+          .scroll(function() {
+            rootPos.top  = element.parent().position().top  - element.parent().scrollTop();
+            rootPos.left = element.parent().position().left - element.parent().scrollLeft();
+          });
 
         var startPos = null;
         // 親（ホワイトボード上）でマウスを押下したときの処理
