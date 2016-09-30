@@ -159,6 +159,27 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           return postItIds;
         };
 
+        // 付箋で設定できる色
+        var colorNames = [
+          { en: 'yellow', jp: '黄色' },
+          { en: 'blue',   jp: '青色' }
+        ];
+        // 1つの色選択メニューを返す関数を用いてループ変数を介在させないようにする
+        var createColorMenu = function(colorName) {
+          return {
+            name : colorName.jp,
+            fun  : function() {
+              var postItIds = getSelectedPostItIds(scope.postIts);
+              // 色変更イベントをサーバーに送る
+              scope.WebSocket.emit('post-its-color-change', postItIds, colorName.en);
+            }
+          }
+        }
+        // 色選択メニューをループを使って指定する
+        var colorMenu = [];
+        for(var i = 0; i < colorNames.length; i++) {
+          colorMenu.push(createColorMenu(colorNames[i]));
+        }
         // コンテキストメニューを作成する
         var menu = [
           {
@@ -174,12 +195,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
             }
           },
           {
-            name : '色の変更',
-            fun  : function() {
-              var postItIds = getSelectedPostItIds(scope.postIts)
-              // 色変更イベントをサーバーに送る
-              scope.WebSocket.emit('post-its-color-change', postItIds, 'blue');
-            }
+            name    : '色の変更',
+            title   : '付箋の色を変更します。',
+            subMenu : colorMenu
           },
           {
             name  : '削除',
