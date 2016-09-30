@@ -230,6 +230,22 @@ io.sockets.on('connection', function(socket) {
     });
   });
 
+  // 付箋の色変更イベントを受信した時
+  socket.on('post-its-color-change', function(postItIds, colorName) {
+    for(var i = 0; i < postItIds.length; i++) {
+      mongoose.model('PostIt').findById(postItIds[i], function(err, postIt) {
+        postIt.colorName = colorName;
+        postIt.save(function(err) {
+          if(err) {
+            console.log(err);
+          }
+        });
+      });
+    }
+    // 自分も含めて全員に付箋の色変更イベントを送る
+    io.to(room._id).emit('post-its-color-change', postItIds, colorName);
+  });
+
   // 付箋削除イベントを受信した時
   socket.on('post-it-delete', function(postItIds) {
     mongoose.model('PostIt').remove({ _id: { $in: postItIds } }, function(err) {

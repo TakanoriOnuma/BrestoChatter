@@ -148,6 +148,17 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
             rootPos.left = element.position().left - element.scrollLeft();
           });
 
+        // 選択されている付箋をIDリストで返す
+        var getSelectedPostItIds = function(postIts) {
+          var postItIds = []
+          for(var i = 0; i < postIts.length; i++) {
+            if(postIts[i].selected) {
+              postItIds.push(postIts[i]._id);
+            }
+          }
+          return postItIds;
+        };
+
         // コンテキストメニューを作成する
         var menu = [
           {
@@ -163,16 +174,19 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
             }
           },
           {
+            name : '色の変更',
+            fun  : function() {
+              var postItIds = getSelectedPostItIds(scope.postIts)
+              // 色変更イベントをサーバーに送る
+              scope.WebSocket.emit('post-its-color-change', postItIds, 'blue');
+            }
+          },
+          {
             name  : '削除',
             title : '選択した付箋を削除します。',
             fun   : function() {
               if(window.confirm('選択した付箋を削除してもよろしいですか？')) {
-                var delPostItIds = [];
-                for(var i = 0; i < scope.postIts.length; i++) {
-                  if(scope.postIts[i].selected) {
-                    delPostItIds.push(scope.postIts[i]._id);
-                  }
-                }
+                var delPostItIds = getSelectedPostItIds(scope.postIts);
                 // 付箋削除イベントをサーバーに送る
                 scope.WebSocket.emit('post-it-delete', delPostItIds);
               }
@@ -323,7 +337,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         postIt : '='
       },
-      template: '<div class="my-post-it" ng-class="{ \'my-post-it-selected\': postIt.selected }">' +
+      template: '<div class="my-post-it my-post-it-{{postIt.colorName}}" ng-class="{ \'my-post-it-selected\': postIt.selected }">' +
                 '  <span ng-bind-html="postIt.message | nl2br"></span>' +
                 '</div>',
       controller: ['$scope', 'WebSocket', 'DragManager', function($scope, WebSocket, DragManager) {
@@ -844,6 +858,18 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           postIt[0].message = message;
         });
       }
+    });
+
+    // 付箋の色変更イベントを受信した時
+    WebSocket.on('post-its-color-change', function(postItIds, colorName) {
+      $timeout(function() {
+        for(var i = 0; i < postItIds.length; i++) {
+          var postIt = $filter('filter')($scope.postIts, { _id : postItIds[i] });
+          if(postIt.length === 1) {
+            postIt[0].colorName = colorName;
+          }
+        }
+      })
     });
 
     // 付箋削除イベントを受信した時

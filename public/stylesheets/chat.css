@@ -36,8 +36,18 @@
   cursor: default;
 }
 
+.my-post-it-yellow {
+  border: solid #bb9 1px;
+  background-color: #ffa;
+}
+
+.my-post-it-blue {
+  border: solid #5cc 1px;
+  background-color: #7ff;
+}
+
 .my-post-it-selected {
-  border: solid #ffa 1px;
+  border: solid #fff 1px;
   outline: solid #acf 2px;
 }
 
