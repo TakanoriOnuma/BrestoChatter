@@ -36,8 +36,33 @@
   cursor: default;
 }
 
+.my-post-it-yellow {
+  border: solid #bb9 1px;
+  background-color: #ffa;
+}
+
+.my-post-it-pink {
+  border: solid #c9c 1px;
+  background-color: #fcf;
+}
+
+.my-post-it-blue {
+  border: solid #88c 1px;
+  background-color: #ccf;
+}
+
+.my-post-it-orange {
+  border: solid #ca5 1px;
+  background-color: #fd9;
+}
+
+.my-post-it-green {
+  border: solid #5c5 1px;
+  background-color: #9f9;
+}
+
 .my-post-it-selected {
-  border: solid #ffa 1px;
+  border: solid #fff 1px;
   outline: solid #acf 2px;
 }
 

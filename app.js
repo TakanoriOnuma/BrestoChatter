@@ -58,9 +58,10 @@ mongoose.model('Chat', new mongoose.Schema({
 
 // PostItモデルの登録
 mongoose.model('PostIt', new mongoose.Schema({
-  roomId   : Object,
-  position : Object,
-  message  : String
+  roomId    : Object,
+  position  : Object,
+  message   : String,
+  colorName : { type: String, default: 'yellow' }
 }));
 
 // Userモデルの登録
