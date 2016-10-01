@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 
 var mongoose = require('mongoose');
+var sessionCheck = require('../validation/sessionCheck');
 
 // ログイン画面
 router.get('/login', function(req, res, next) {
@@ -53,6 +54,15 @@ router.get('/registration/:email', function(req, res, next) {
     var email = (emails.length === 0) ? '' : emails[0];
     res.send(email);
   });
+});
+
+// ユーザ情報の編集画面
+router.get('/edit', sessionCheck.loginCheck, function(req, res, next) {
+  res.render('user/edit', { title: 'ユーザ情報編集' });
+});
+// ユーザ情報取得
+router.get('/userinfo', sessionCheck.loginCheck, function(req, res, next) {
+  res.send(req.session.user);
 });
 
 module.exports = router;
