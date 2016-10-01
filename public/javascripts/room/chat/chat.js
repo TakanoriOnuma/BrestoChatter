@@ -815,7 +815,6 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           members[i].cursorColorName = 'white';
         }
       }
-      console.log(members, user);
       $timeout(function() {
         angular.extend($scope.members, members);
         $scope.user = user;
