@@ -9,7 +9,7 @@ angular.module('myApp', ['ngMessages', 'myForm'])
         }
       });
 
-    $scope.cursorColorNames = ['red', 'blue'];
+    $scope.cursorColorNames = ['red', 'orange', 'yellow', 'green', 'skyblue', 'blue', 'purple'];
 
     $scope.onsubmit = function() {
       console.log($scope.user);
