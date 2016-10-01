@@ -40,7 +40,7 @@ block content
         uib-tabset
           uib-tab(index='0', heading='メンバーリスト')
             ul(ng-cloak)
-              li(ng-repeat='member in members | orderBy: "userName"') {{member.userName}}
+              li(ng-repeat='member in members | orderBy: "userName"' style='list-style-image: url(/cursor/{{member.cursorColorName}}.png)') {{member.userName}}
           uib-tab(index='1', heading='アイデア促進')
             span アイデア促進
 
