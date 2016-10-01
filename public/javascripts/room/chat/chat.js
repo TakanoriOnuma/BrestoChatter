@@ -307,10 +307,14 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       })
       .mousemove(function(event) {
         if(_pos) {
-          var movedPos = { x: event.pageX, y: event.pageY };
-          _dragProcess(movedPos.x - _pos.x, movedPos.y - _pos.y);
-          _pos = movedPos;
-          _isDragged = true;
+          var movedPos = { x: event.pageX,         y: event.pageY };
+          var vec      = { x: movedPos.x - _pos.x, y: movedPos.y - _pos.y };
+          // 変化量がある時だけ動かす
+          if(vec.x !== 0 && vec.y !== 0) {
+            _dragProcess(vec.x, vec.y);
+            _pos = movedPos;
+            _isDragged = true;
+          }
         }
       })
       .mouseup(function(event) {
@@ -389,7 +393,6 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         var $span = $('span', element);
         // クリック時の処理
         element.click(function(event) {
-          event.stopPropagation();
           // 編集状態でない場合は編集可能にして、次のクリックで編集出来るようにする
           if(!scope.postIt.editable) {
             scope.postIt.editable = true;
