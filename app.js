@@ -66,9 +66,10 @@ mongoose.model('PostIt', new mongoose.Schema({
 
 // Userモデルの登録
 mongoose.model('User', new mongoose.Schema({
-  email    : {type: String, unique: true},
-  userName : String,
-  password : String
+  email           : { type: String, unique: true },
+  userName        : String,
+  password        : String,
+  cursorColorName : { type: String, default: 'red' }
 }));
 
 // Roomモデルの登録

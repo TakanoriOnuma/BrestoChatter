@@ -1,0 +1,30 @@
+extends ../layout
+
+block content
+  h2 ユーザ情報編集
+  form(name='regForm', ng-submit='onsubmit()', novalidate, ng-model-options="{updateOn: 'blur'}")
+    div
+      label(for='userName') ユーザ名：
+      input#userName(type='text', name='userName', ng-model='user.userName', required)
+      span(ng-messages='regForm.userName.$error', ng-cloak)
+        span(ng-message='required') 入力は必須です。
+    div
+      span メールアドレス：
+      span(ng-cloak) {{user.email}}
+    div
+      span パスワード：
+      span セキュリティのため非表示です。
+    div
+      div カーソル：
+      label(ng-repeat='cursorColorName in cursorColorNames' ng-cloak)
+        input(type='radio', ng-value='cursorColorName', ng-model='user.cursorColorName', name='cursorColorName')
+        img(ng-src='/cursor/{{cursorColorName}}.png')
+    input(type='submit', value='編集', ng-disabled='regForm.$invalid || regForm.$submitted')
+
+block stylesheets
+  link(rel='stylesheet', href='/stylesheets/form.css')
+
+block scripts
+  script(src='https://ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular-messages.min.js')
+  script(src='/javascripts/modules/myForm.js')
+  script(src='/javascripts/user/edit.js')

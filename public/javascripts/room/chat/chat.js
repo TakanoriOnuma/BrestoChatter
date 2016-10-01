@@ -60,7 +60,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
                 '  <span>ホワイトボード</span>' +
                 '  <my-post-it ng-repeat="postIt in postIts" post-it="postIt">' +
                 '  </my-post-it>' +
-                '  <my-cursor ng-repeat="member in members | filter: myFilter" pos="member.position"></my-cursor>' +
+                '  <my-cursor ng-repeat="member in members | filter: myFilter" pos="member.position" color-name="member.cursorColorName"></my-cursor>' +
                 '  <my-select-field select-field="selField"></my-select-field>' +
                 '</div>',
       controller: ['$scope', '$filter', 'WebSocket', 'DragManager', function($scope, $filter, WebSocket, DragManager) {
@@ -444,12 +444,12 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       restrict: 'E',
       replace: true,
       scope: {
-        pos    : '=',
-        cursor : '='
+        pos       : '=',
+        colorName : '='
       },
-      template: '<img class="my-cursor" ng-src="{{cursor}}">',
+      template: '<img class="my-cursor" ng-src="/cursor/{{colorName}}.png">',
       link: function(scope, element, attrs) {
-        if(!scope.cursor) scope.cursor = '/cursor/arrow.cur';
+        if(!scope.colorName) scope.colorName = 'red';
 
         // 座標の変化を検知したら、反映させる
         scope.$watch('pos', function(newValue, oldValue, scope) {
@@ -805,6 +805,17 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
     });
     // メンバーリストを受信した時
     WebSocket.on('members', function(members, user) {
+      for(var i = 0; i < members.length; i++) {
+        // カーソルの色に指定がない時
+        if(!members[i].cursorColorName) {
+          members[i].cursorColorName = 'red';
+        }
+        // 自分のカーソルは白に設定する
+        if(members[i]._id === user._id) {
+          members[i].cursorColorName = 'white';
+        }
+      }
+      console.log(members, user);
       $timeout(function() {
         angular.extend($scope.members, members);
         $scope.user = user;
