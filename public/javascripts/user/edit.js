@@ -9,6 +9,7 @@ angular.module('myApp', ['ngMessages', 'myForm'])
         }
       });
 
+    // カーソルの色名
     $scope.cursorColorNames = ['red', 'orange', 'yellow', 'green', 'skyblue', 'blue', 'purple'];
 
     $scope.onsubmit = function() {

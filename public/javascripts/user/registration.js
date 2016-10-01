@@ -1,5 +1,10 @@
 angular.module('myApp', ['ngMessages', 'myForm'])
   .controller('MyController', ['$scope', '$http', function($scope, $http) {
+    // カーソルの色名
+    $scope.cursorColorNames = ['red', 'orange', 'yellow', 'green', 'skyblue', 'blue', 'purple'];
+    // デフォルト値を設定
+    $scope.user = { cursorColorName: 'red' };
+
     $scope.onsubmit = function() {
       var data = angular.copy($scope.user);
       var hash = CryptoJS.SHA3(data.password);
