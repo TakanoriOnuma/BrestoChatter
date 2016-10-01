@@ -69,7 +69,7 @@ mongoose.model('User', new mongoose.Schema({
   email           : { type: String, unique: true },
   userName        : String,
   password        : String,
-  cursolColorName : { type: String, default: 'red' }
+  cursorColorName : { type: String, default: 'red' }
 }));
 
 // Roomモデルの登録

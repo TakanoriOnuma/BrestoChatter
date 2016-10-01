@@ -10,7 +10,7 @@ block content
         span(ng-message='required') 入力は必須です。
     div
       span メールアドレス：
-      span {{user.email}}
+      span(ng-cloak) {{user.email}}
     div
       span パスワード：
       span セキュリティのため非表示です。

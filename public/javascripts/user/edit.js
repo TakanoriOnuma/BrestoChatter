@@ -13,12 +13,12 @@ angular.module('myApp', ['ngMessages', 'myForm'])
 
     $scope.onsubmit = function() {
       console.log($scope.user);
-      // $http.post('./registration', data)
-      //   .success(function(data, status, headers, config) {
-      //     console.log(data);
-      //     if(data) {
-      //       window.location.href = './login';
-      //     }
-      //   });
+      $http.post('./edit', $scope.user)
+        .success(function(data, status, headers, config) {
+          console.log(data);
+          if(data) {
+            window.location.href = '/';
+          }
+        });
     };
   }]);

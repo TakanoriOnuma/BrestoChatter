@@ -60,6 +60,28 @@ router.get('/registration/:email', function(req, res, next) {
 router.get('/edit', sessionCheck.loginCheck, function(req, res, next) {
   res.render('user/edit', { title: 'ユーザ情報編集' });
 });
+// ユーザ情報の編集
+router.post('/edit', function(req, res, next) {
+  mongoose.model('User').findById(req.body._id, function(err, user) {
+    // コピーしちゃマズいキーは消しておく
+    delete req.body._id;
+    for(var key in req.body) {
+      user[key] = req.body[key];
+    }
+    console.log(user);
+    user.save(function(err) {
+      if(err) {
+        console.log(err);
+        res.send(false);
+      }
+      else {
+        // 変更情報をセッションにも保存する
+        req.session.user = user;
+        res.send(true);
+      }
+    });
+  });
+});
 // ユーザ情報取得
 router.get('/userinfo', sessionCheck.loginCheck, function(req, res, next) {
   res.send(req.session.user);
