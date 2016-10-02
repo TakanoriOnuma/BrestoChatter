@@ -16,11 +16,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         chats: '='
       },
-      template: '<ul class="my-chat-list" ng-cloak>' +
-                '  <li ng-repeat="chat in chats track by $index">' +
-                '    <my-chat chat="chat"></my-chat>' +
-                '  </li>' +
-                '</ul>',
+      template: '<div class="my-chat-list" ng-cloak>' +
+                '  <my-chat ng-repeat="chat in chats track by $index" chat="chat"></my-chat>' +
+                '</div>',
       link: function(scope, element, attrs) {
         // chats配列を監視して、変化があればスクロールを最下部に移動する
         scope.$watchCollection('chats', function(newValue, oldValue, scope) {
@@ -37,12 +35,91 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         chat: '='
       },
-      template: '<div class="my-chat" chat-id="{{chat._id}}">' +
-                '  {{chat.userName}} ({{chat.createdDate | date: "yyyy/MM/dd HH:mm:ss"}})<br>' +
-                '  <span class="message">{{chat.message}}</span>' +
+      template: '<table chat-id="{{chat._id}}" style="margin-left: 10px; width: 95%"' +
+                '  <tr>' +
+                '    <td class="my-chat">' +
+                '      {{chat.userName}} ({{chat.createdDate | date: "yyyy/MM/dd HH:mm:ss"}})<br>' +
+                '      <span class="message">{{chat.message}}</span>' +
+                '    </td>' +
+                '    <td rowspan="2" style="width: 70px; text-align: right">' +
+                '      <input type="button" value="削除" ng-click="delete()">' +
+                '    </td>' +
+                '  </tr>' +
+                '</table>',
+      controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
+        $scope.WebSocket = WebSocket;
+      }],
+      link: function(scope, element, attrs) {
+        $('.my-chat', element).draggable({helper: 'clone'});
+
+        // 削除ボタン押下時のイベント処理
+        scope.delete = function() {
+          if(window.confirm('削除してもよろしいですか？')) {
+            scope.WebSocket.emit('chat-delete', scope.chat._id);
+          }
+        }
+      }
+    };
+  })
+  // 個人用メモ一覧を表示するディレクティブ
+  .directive('myMemoList', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        memos: '='
+      },
+      template: '<div class="my-chat-list" ng-cloak>' +
+                '    <my-memo ng-repeat="memo in memos track by $index" memo="memo"></my-memo>' +
                 '</div>',
       link: function(scope, element, attrs) {
-        element.draggable({helper: 'clone'});
+        // chats配列を監視して、変化があればスクロールを最下部に移動する
+        scope.$watchCollection('memos', function(newValue, oldValue, scope) {
+          element[0].scrollTop = element[0].scrollHeight;
+        });
+      }
+    };
+  })
+  // 個人用メモディレクティブ
+  .directive('myMemo', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        memo: '='
+      },
+      template: '<table chat-id="{{chat._id}}" style="margin-left: 10px; width: 95%"' +
+                '  <tr>' +
+                '    <td class="my-chat">' +
+                '      <span class="message">{{memo.message}}</span>' +
+                '    </td>' +
+                '    <td rowspan="2" style="width: 70px; text-align: right">' +
+                '      <input type="button" value="削除" ng-click="delete()">' +
+                '    </td>' +
+                '  </tr>' +
+                '</table>',
+      controller: ['$scope', '$http', function($scope, $http) {
+        // 削除ボタン押下時の処理
+        $scope.delete = function() {
+          if(window.confirm('削除してもよろしいですか？')) {
+            $http.post('./memo-delete', { memoId: $scope.memo._id })
+              .success(function(data, status, headers, config) {
+                if(data) {
+                  // 応急処置で親スコープからメモリストを取ってくる
+                  var memos = $scope.$parent.$parent.memos;
+                  for(var i = 0; i < memos.length; i++) {
+                    if(memos[i]._id === $scope.memo._id) {
+                      memos.splice(i, 1);
+                      break;
+                    }
+                  }
+                }
+              });
+          }
+        };
+      }],
+      link: function(scope, element, attrs) {
+        $('.my-chat', element).draggable({helper: 'clone'});
       }
     };
   })
@@ -781,9 +858,51 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   .factory('WebSocket', function() {
     return io();
   })
+  // 単語帳取得サービス
+  // 単語リストは（https://ja.wiktionary.org/wiki/Wiktionary:日本語の基本語彙1000）から抜粋
+  .service('WordList', function() {
+    // 形容詞リスト
+    this.adjectives = [
+      '良い',   '悪い',   '高い',     '低い',     '安い',
+      '大きい', '小さい', '細い',     '太い',     '古い',
+      '新しい', '若い',   '軽い',     '重い',     '易しい',
+      '優しい', '難しい', '柔らかい', '固い',     '熱い',
+      '冷たい', '寒い',   '薄い',     '美味しい', '上手い',
+      'マズい', '甘い',   '辛い',     '苦い',     '忙しい'
+    ];
+    // 形容動詞リスト
+    this.adjectiveVerbs = [
+      '綺麗で',   '静かで', '上手で', '丁寧で', '下手で',
+      '可能で',   '好きで', '重要で', '非常に', '様々で',
+      '特別で',   '確かに', '簡単で', '大切で', '十分に',
+      '明らかに', '嫌いで', '同じで', '大変で'
+    ];
+    // 副詞リスト
+    this.adverbs = [
+      'もうすぐ', 'まだ',   'ずっと', 'とても', 'どう',
+      'きっと',   'よく',   '少し',   'やはり', 'ちょっと',
+      'また',     'まず',   'すぐ',   '特に',   '例えば',
+      'なぜ',     '全く',   '一番',   '勿論',   '既に',
+      '更に',     '初めて', '必ず',   'かなり', 'はっきり'
+    ];
+
+    // 各単語をランダムで取得
+    this.getRandomAdjective = function() {
+      var idx = Math.floor(Math.random() * this.adjectives.length);
+      return this.adjectives[idx];
+    };
+    this.getRandomAdjectiveVerb = function() {
+      var idx = Math.floor(Math.random() * this.adjectiveVerbs.length);
+      return this.adjectiveVerbs[idx];
+    };
+    this.getRandomAdverb = function() {
+      var idx = Math.floor(Math.random() * this.adverbs.length);
+      return this.adverbs[idx];
+    };
+  })
   // メインコントローラー
-  .controller('MyController', ['$scope', '$timeout', '$filter', 'ChatService', 'WebSocket',
-  function($scope, $timeout, $filter, ChatService, WebSocket) {
+  .controller('MyController', ['$scope', '$http', '$timeout', '$filter', 'ChatService', 'WordList', 'WebSocket',
+  function($scope, $http, $timeout, $filter, ChatService, WordList, WebSocket) {
     // スケジュールを取得
     $scope.schedule = [];
     WebSocket.on('schedule', function(schedule) {
@@ -795,6 +914,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
     // 参照できるようにあらかじめ初期化する
     $scope.chat = {
       message:  ''
+    };
+    $scope.memo = {
+      message: ''
     };
 
     // メンバーリスト
@@ -843,7 +965,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       });
     });
 
-    // チャットリストを取得する
+    // チャットに関する処理
     $scope.chats = ChatService.getDataList('./chats');
     // chatというイベントを受信した時
     WebSocket.on('chat', function(chat) {
@@ -851,7 +973,17 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         $scope.chats.push(chat);
       });
     });
-
+    // チャット削除イベントを受信した時
+    WebSocket.on('chat-delete', function(chatId) {
+      $timeout(function() {
+        for(var i = 0; i < $scope.chats.length; i++) {
+          if($scope.chats[i]._id === chatId) {
+            $scope.chats.splice(i, 1);
+            break;
+          }
+        }
+      });
+    });
     // submitイベント時の処理
     $scope.sendMessage = function() {
       if($scope.chat.message === '') {
@@ -860,6 +992,36 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       // chatイベントを送信する
       WebSocket.emit('chat', $scope.chat.message);
       $scope.chat.message = '';
+    };
+
+    // 個人用メモに関する処理
+    $scope.memos = ChatService.getDataList('./memos');
+    $scope.sendMemo = function() {
+      if($scope.memo.message === '') {
+        return;
+      }
+      // memoイベントを送信する
+      $scope.registerMemo($scope.memo.message);
+      $scope.memo.message = '';
+    };
+
+    // 付箋に一括登録
+    $scope.registerPostIts = function(dats) {
+      // 登録確認で拒否したら処理を飛ばす
+      if(!window.confirm('メモ情報を全て付箋として登録してもよろしいですか？')) {
+        return;
+      }
+
+      // データ1個1個を登録していく
+      for(var i = 0; i < dats.length; i++) {
+        // 付箋情報に成型
+        var postIt = {
+          message  : dats[i].message,
+          position : { x: 0, y: 0 }
+        };
+        // 付箋の作成イベントをサーバーに送る
+        WebSocket.emit('post-it-create', postIt);
+      }
     };
 
     // 付箋リストをセットする
@@ -932,4 +1094,17 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         });
       }
     });
+
+    // アイデア促進に使う単語リストサービスをセットする
+    $scope.WordList = WordList;
+    // 生成した言葉を個人メモに登録する
+    $scope.registerMemo = function(word) {
+      // memoイベントを送信する
+      $http.post('./memo', { message: word })
+        .success(function(data, status, headers, config) {
+          if(data) {
+            $scope.memos.push(data);
+          }
+        });
+    }
   }]);

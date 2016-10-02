@@ -36,13 +36,45 @@ block content
               input(type='submit', value='送信')
           uib-tab(index='1', heading='ログ')
             span 音声通話などのログ
+          uib-tab(index='2', heading='個人用メモ')
+            my-memo-list(memos='memos')
+            form(ng-submit='sendMemo()')
+              label(for='memo') 内容：
+              input#memo(name='memo', type='text', ng-model='memo.message')
+              input(type='submit', value='送信')
+            input(type='button', value='一括付箋登録', ng-click='registerPostIts(memos)')
       td(colspan='2' valign='top')
         uib-tabset
           uib-tab(index='0', heading='メンバーリスト')
             ul(ng-cloak)
               li(ng-repeat='member in members | orderBy: "userName"' style='list-style-image: url(/cursor/{{member.cursorColorName}}.png)') {{member.userName}}
           uib-tab(index='1', heading='アイデア促進')
-            span アイデア促進
+            table(width='100%')
+              tr
+                td(align='center')
+                  span 副詞&nbsp;
+                  input(type='button', value='更新', ng-click='word.adverb = WordList.getRandomAdverb()')
+                  br
+                  input(type='text', ng-model='word.adverb', ng-init='word.adverb = WordList.getRandomAdverb()', style='width: 100px')
+                td(align='center')
+                  span 形容動詞&nbsp;
+                  input(type='button', value='更新', ng-click='word.adjectiveVerb = WordList.getRandomAdjectiveVerb()')
+                  br
+                  input(type='text', ng-model='word.adjectiveVerb', ng-init='word.adjectiveVerb = WordList.getRandomAdjectiveVerb()' style='width: 100px')
+                td(align='center')
+                  span 形容詞&nbsp;
+                  input(type='button', value='更新', ng-click='word.adjective = WordList.getRandomAdjective()')
+                  br
+                  input(type='text', ng-model='word.adjective', ng-init='word.adjective = WordList.getRandomAdjective()' style='width: 100px')
+                td(align='center')
+                  span 名詞
+                  br
+                  input(type='text', ng-model='word.noun', style='width: 100px')
+              tr
+                td(colspan='3', style='padding-left: 10px; padding-top: 10px')
+                  span {{word.word = word.adverb + word.adjectiveVerb + word.adjective + word.noun}}
+                  br
+                  input(type='button', value='メモ', ng-click='registerMemo(word.word)')
 
 block stylesheets
   link(rel='stylesheet', href='https://netdna.bootstrapcdn.com/bootstrap/latest/css/bootstrap.min.css')

@@ -24,6 +24,42 @@ router.get('/chats', sessionCheck.enterCheck, function(req, res) {
     });
 });
 
+// /memosにGETアクセスした時、Memo一覧を取得するAPI
+router.get('/memos', sessionCheck.enterCheck, function(req, res) {
+  // roomIdとuserIdに紐づかれたmemoを取得して送る
+  mongoose.model('Memo')
+    .find({ roomId: req.session.room._id, userId: req.session.user._id })
+    .sort('createdDate')
+    .exec(function(err, memos) {
+      res.send(memos);
+    });
+});
+// /memoにPOSTアクセスした時、memoを登録する
+router.post('/memo', sessionCheck.enterCheck, function(req, res) {
+  var newMemo = new (mongoose.model('Memo'))();
+  newMemo.message = req.body.message;
+  newMemo.roomId  = req.session.room._id;
+  newMemo.userId  = req.session.user._id;
+  newMemo.save(function(err) {
+    if(err) {
+      console.log(err);
+    }
+  });
+  res.send(newMemo);
+});
+// /memo-deleteにPOSTアクセスした時、memoIdを持つmemoを削除する
+router.post('/memo-delete', sessionCheck.enterCheck, function(req, res) {
+  mongoose.model('Memo').remove({ _id: req.body.memoId }, function(err) {
+    if(err) {
+      console.log(err);
+      res.send(false);
+    }
+    else {
+      res.send(true);
+    }
+  });
+});
+
 // /post-itsにGETアクセスした時、PostIt一覧を取得するAPI
 router.get('/post-its', sessionCheck.enterCheck, function(req, res) {
   // roomIdに紐づかれたpostItを取得して送る
