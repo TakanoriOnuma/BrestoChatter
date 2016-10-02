@@ -1001,13 +1001,8 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         return;
       }
       // memoイベントを送信する
-      $http.post('./memo', $scope.memo)
-        .success(function(data, status, headers, config) {
-          if(data) {
-            $scope.memos.push(data);
-            $scope.memo.message = '';
-          }
-        });
+      $scope.registerMemo($scope.memo.message);
+      $scope.memo.message = '';
     };
 
     // 付箋に一括登録
@@ -1102,4 +1097,14 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
 
     // アイデア促進に使う単語リストサービスをセットする
     $scope.WordList = WordList;
+    // 生成した言葉を個人メモに登録する
+    $scope.registerMemo = function(word) {
+      // memoイベントを送信する
+      $http.post('./memo', { message: word })
+        .success(function(data, status, headers, config) {
+          if(data) {
+            $scope.memos.push(data);
+          }
+        });
+    }
   }]);

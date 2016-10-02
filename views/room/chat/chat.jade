@@ -70,6 +70,11 @@ block content
                   span 名詞
                   br
                   input(type='text', ng-model='word.noun', style='width: 100px')
+              tr
+                td(colspan='3', style='padding-left: 10px; padding-top: 10px')
+                  span {{word.word = word.adverb + word.adjectiveVerb + word.adjective + word.noun}}
+                  br
+                  input(type='button', value='メモ', ng-click='registerMemo(word.word)')
 
 block stylesheets
   link(rel='stylesheet', href='https://netdna.bootstrapcdn.com/bootstrap/latest/css/bootstrap.min.css')
