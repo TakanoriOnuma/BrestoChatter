@@ -968,6 +968,25 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         });
     };
 
+    // 付箋に一括登録
+    $scope.registerPostIts = function(dats) {
+      // 登録確認で拒否したら処理を飛ばす
+      if(!window.confirm('メモ情報を全て付箋として登録してもよろしいですか？')) {
+        return;
+      }
+
+      // データ1個1個を登録していく
+      for(var i = 0; i < dats.length; i++) {
+        // 付箋情報に成型
+        var postIt = {
+          message  : dats[i].message,
+          position : { x: 0, y: 0 }
+        };
+        // 付箋の作成イベントをサーバーに送る
+        WebSocket.emit('post-it-create', postIt);
+      }
+    };
+
     // 付箋リストをセットする
     $scope.postIts = ChatService.getDataList('./post-its');
     // post-it-createというイベントを受信した時

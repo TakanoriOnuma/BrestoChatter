@@ -42,6 +42,7 @@ block content
               label(for='memo') 内容：
               input#memo(name='memo', type='text', ng-model='memo.message')
               input(type='submit', value='送信')
+            input(type='button', value='一括付箋登録', ng-click='registerPostIts(memos)')
       td(colspan='2' valign='top')
         uib-tabset
           uib-tab(index='0', heading='メンバーリスト')
