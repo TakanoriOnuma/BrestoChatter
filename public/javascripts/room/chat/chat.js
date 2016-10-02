@@ -244,8 +244,30 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           { en: 'pink',   jp: 'ピンク' },
           { en: 'orange', jp: 'オレンジ' }
         ];
+        // 1つの付箋作成メニューを返す関数を用いてループ変数を介在させないようにする
+        var createPostItCreationMenu = function(colorName) {
+          return {
+            name : colorName.jp,
+            img  : '/images/postItColor/{0}.png'.replace('{0}', colorName.en),
+            fun  : function(ui) {
+              var pos = ui.menu.position();
+              // 付箋作成イベントをサーバーに送る
+              scope.WebSocket.emit('post-it-create', {
+                message   : '',
+                position  : { x: pos.left - rootPos.left, y: pos.top - rootPos.top },
+                colorName : colorName.en
+              });
+            }
+          }
+        }
+        // 付箋作成メニューをループを使って指定する
+        var postItCreationMenu = [];
+        for(var i = 0; i < colorNames.length; i++) {
+          postItCreationMenu.push(createPostItCreationMenu(colorNames[i]));
+        }
+
         // 1つの色選択メニューを返す関数を用いてループ変数を介在させないようにする
-        var createColorMenu = function(colorName) {
+        var createColorSelectMenu = function(colorName) {
           return {
             name : colorName.jp,
             img  : '/images/postItColor/{0}.png'.replace('{0}', colorName.en),
@@ -257,28 +279,21 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           }
         }
         // 色選択メニューをループを使って指定する
-        var colorMenu = [];
+        var colorSelectMenu = [];
         for(var i = 0; i < colorNames.length; i++) {
-          colorMenu.push(createColorMenu(colorNames[i]));
+          colorSelectMenu.push(createColorSelectMenu(colorNames[i]));
         }
         // コンテキストメニューを作成する
         var menu = [
           {
-            name  : '作成',
-            title : '付箋を新しく作ります。',
-            fun   : function(ui) {
-              var pos = ui.menu.position();
-              // 付箋作成イベントをサーバーに送る
-              scope.WebSocket.emit('post-it-create', {
-                message  : '',
-                position : { x: pos.left - rootPos.left, y: pos.top - rootPos.top }
-              });
-            }
+            name    : '作成',
+            title   : '付箋を新しく作ります。',
+            subMenu : postItCreationMenu
           },
           {
             name    : '色の変更',
             title   : '選択した付箋の色を変更します。',
-            subMenu : colorMenu
+            subMenu : colorSelectMenu
           },
           {
             name  : '削除',
