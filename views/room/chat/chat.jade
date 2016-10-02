@@ -49,7 +49,27 @@ block content
             ul(ng-cloak)
               li(ng-repeat='member in members | orderBy: "userName"' style='list-style-image: url(/cursor/{{member.cursorColorName}}.png)') {{member.userName}}
           uib-tab(index='1', heading='アイデア促進')
-            span アイデア促進
+            table(width='100%')
+              tr
+                td(align='center')
+                  span 副詞&nbsp;
+                  input(type='button', value='更新', ng-click='word.adverb = WordList.getRandomAdverb()')
+                  br
+                  input(type='text', ng-model='word.adverb', ng-init='word.adverb = WordList.getRandomAdverb()', style='width: 100px')
+                td(align='center')
+                  span 形容動詞&nbsp;
+                  input(type='button', value='更新', ng-click='word.adjectiveVerb = WordList.getRandomAdjectiveVerb()')
+                  br
+                  input(type='text', ng-model='word.adjectiveVerb', ng-init='word.adjectiveVerb = WordList.getRandomAdjectiveVerb()' style='width: 100px')
+                td(align='center')
+                  span 形容詞&nbsp;
+                  input(type='button', value='更新', ng-click='word.adjective = WordList.getRandomAdjective()')
+                  br
+                  input(type='text', ng-model='word.adjective', ng-init='word.adjective = WordList.getRandomAdjective()' style='width: 100px')
+                td(align='center')
+                  span 名詞
+                  br
+                  input(type='text', ng-model='word.noun', style='width: 100px')
 
 block stylesheets
   link(rel='stylesheet', href='https://netdna.bootstrapcdn.com/bootstrap/latest/css/bootstrap.min.css')

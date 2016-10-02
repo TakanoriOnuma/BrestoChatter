@@ -858,9 +858,51 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   .factory('WebSocket', function() {
     return io();
   })
+  // 単語帳取得サービス
+  // 単語リストは（https://ja.wiktionary.org/wiki/Wiktionary:日本語の基本語彙1000）から抜粋
+  .service('WordList', function() {
+    // 形容詞リスト
+    this.adjectives = [
+      '良い',   '悪い',   '高い',     '低い',     '安い',
+      '大きい', '小さい', '細い',     '太い',     '古い',
+      '新しい', '若い',   '軽い',     '重い',     '易しい',
+      '優しい', '難しい', '柔らかい', '固い',     '熱い',
+      '冷たい', '寒い',   '薄い',     '美味しい', '上手い',
+      'マズい', '甘い',   '辛い',     '苦い',     '忙しい'
+    ];
+    // 形容動詞リスト
+    this.adjectiveVerbs = [
+      '綺麗で',   '静かで', '上手で', '丁寧で', '下手で',
+      '可能で',   '好きで', '重要で', '非常に', '様々で',
+      '特別で',   '確かに', '簡単で', '大切で', '十分に',
+      '明らかに', '嫌いで', '同じで', '大変で'
+    ];
+    // 副詞リスト
+    this.adverbs = [
+      'もうすぐ', 'まだ',   'ずっと', 'とても', 'どう',
+      'きっと',   'よく',   '少し',   'やはり', 'ちょっと',
+      'また',     'まず',   'すぐ',   '特に',   '例えば',
+      'なぜ',     '全く',   '一番',   '勿論',   '既に',
+      '更に',     '初めて', '必ず',   'かなり', 'はっきり'
+    ];
+
+    // 各単語をランダムで取得
+    this.getRandomAdjective = function() {
+      var idx = Math.floor(Math.random() * this.adjectives.length);
+      return this.adjectives[idx];
+    };
+    this.getRandomAdjectiveVerb = function() {
+      var idx = Math.floor(Math.random() * this.adjectiveVerbs.length);
+      return this.adjectiveVerbs[idx];
+    };
+    this.getRandomAdverb = function() {
+      var idx = Math.floor(Math.random() * this.adverbs.length);
+      return this.adverbs[idx];
+    };
+  })
   // メインコントローラー
-  .controller('MyController', ['$scope', '$http', '$timeout', '$filter', 'ChatService', 'WebSocket',
-  function($scope, $http, $timeout, $filter, ChatService, WebSocket) {
+  .controller('MyController', ['$scope', '$http', '$timeout', '$filter', 'ChatService', 'WordList', 'WebSocket',
+  function($scope, $http, $timeout, $filter, ChatService, WordList, WebSocket) {
     // スケジュールを取得
     $scope.schedule = [];
     WebSocket.on('schedule', function(schedule) {
@@ -1057,4 +1099,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         });
       }
     });
+
+    // アイデア促進に使う単語リストサービスをセットする
+    $scope.WordList = WordList;
   }]);
