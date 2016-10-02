@@ -36,6 +36,12 @@ block content
               input(type='submit', value='送信')
           uib-tab(index='1', heading='ログ')
             span 音声通話などのログ
+          uib-tab(index='2', heading='個人用メモ')
+            my-memo-list(memos='memos')
+            form(ng-submit='sendMemo()')
+              label(for='memo') 内容：
+              input#memo(name='memo', type='text', ng-model='memo.message')
+              input(type='submit', value='送信')
       td(colspan='2' valign='top')
         uib-tabset
           uib-tab(index='0', heading='メンバーリスト')

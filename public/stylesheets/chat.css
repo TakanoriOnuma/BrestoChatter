@@ -2,6 +2,10 @@
   width: 80%;
 }
 
+#memo {
+  width: 80%;
+}
+
 .unselect {
   user-select: none;         /* CSS3 */
   -moz-user-select: none;    /* Firefox */

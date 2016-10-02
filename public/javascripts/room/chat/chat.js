@@ -46,6 +46,43 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       }
     };
   })
+  // 個人用メモ一覧を表示するディレクティブ
+  .directive('myMemoList', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        memos: '='
+      },
+      template: '<ul class="my-chat-list" ng-cloak>' +
+                '  <li ng-repeat="memo in memos track by $index">' +
+                '    <my-memo memo="memo"></my-memo>' +
+                '  </li>' +
+                '</ul>',
+      link: function(scope, element, attrs) {
+        // chats配列を監視して、変化があればスクロールを最下部に移動する
+        scope.$watchCollection('memos', function(newValue, oldValue, scope) {
+          element[0].scrollTop = element[0].scrollHeight;
+        });
+      }
+    };
+  })
+  // 個人用メモディレクティブ
+  .directive('myMemo', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        memo: '='
+      },
+      template: '<div class="my-chat" memo-id="{{memo._id}}">' +
+                '  <span class="message">{{memo.message}}</span>' +
+                '</div>',
+      link: function(scope, element, attrs) {
+        element.draggable({helper: 'clone'});
+      }
+    };
+  })
   // ホワイトボードディレクティブ
   .directive('myWhiteboard', function() {
     return {
@@ -782,8 +819,8 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
     return io();
   })
   // メインコントローラー
-  .controller('MyController', ['$scope', '$timeout', '$filter', 'ChatService', 'WebSocket',
-  function($scope, $timeout, $filter, ChatService, WebSocket) {
+  .controller('MyController', ['$scope', '$http', '$timeout', '$filter', 'ChatService', 'WebSocket',
+  function($scope, $http, $timeout, $filter, ChatService, WebSocket) {
     // スケジュールを取得
     $scope.schedule = [];
     WebSocket.on('schedule', function(schedule) {
@@ -795,6 +832,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
     // 参照できるようにあらかじめ初期化する
     $scope.chat = {
       message:  ''
+    };
+    $scope.memo = {
+      message: ''
     };
 
     // メンバーリスト
@@ -843,8 +883,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       });
     });
 
-    // チャットリストを取得する
+    // チャットとメモリストを取得する
     $scope.chats = ChatService.getDataList('./chats');
+    $scope.memos = ChatService.getDataList('./memos');
     // chatというイベントを受信した時
     WebSocket.on('chat', function(chat) {
       $timeout(function() {
@@ -860,6 +901,19 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       // chatイベントを送信する
       WebSocket.emit('chat', $scope.chat.message);
       $scope.chat.message = '';
+    };
+    $scope.sendMemo = function() {
+      if($scope.memo.message === '') {
+        return;
+      }
+      // memoイベントを送信する
+      $http.post('./memo', $scope.memo)
+        .success(function(data, status, headers, config) {
+          if(data) {
+            $scope.memos.push(data);
+            $scope.memo.message = '';
+          }
+        });
     };
 
     // 付箋リストをセットする
