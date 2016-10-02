@@ -47,6 +47,18 @@ router.post('/memo', sessionCheck.enterCheck, function(req, res) {
   });
   res.send(newMemo);
 });
+// /memo-deleteにPOSTアクセスした時、memoIdを持つmemoを削除する
+router.post('/memo-delete', sessionCheck.enterCheck, function(req, res) {
+  mongoose.model('Memo').remove({ _id: req.body.memoId }, function(err) {
+    if(err) {
+      console.log(err);
+      res.send(false);
+    }
+    else {
+      res.send(true);
+    }
+  });
+});
 
 // /post-itsにGETアクセスした時、PostIt一覧を取得するAPI
 router.get('/post-its', sessionCheck.enterCheck, function(req, res) {

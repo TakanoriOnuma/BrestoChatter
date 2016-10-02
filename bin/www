@@ -184,6 +184,17 @@ io.sockets.on('connection', function(socket) {
     io.to(room._id).emit('chat', newChat);
   });
 
+  // チャット削除イベントを受信した時
+  socket.on('chat-delete', function(chatId) {
+    mongoose.model('Chat').remove({ _id: chatId }, function(err) {
+      if(err) {
+        console.log(err);
+      }
+    });
+    // 削除イベントを全員に通知する
+    io.to(room._id).emit('chat-delete', chatId);
+  });
+
   // 付箋作成イベントを受信した時
   socket.on('post-it-create', function(postIt) {
     var newPostIt = new (mongoose.model('PostIt'))();

@@ -16,11 +16,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         chats: '='
       },
-      template: '<ul class="my-chat-list" ng-cloak>' +
-                '  <li ng-repeat="chat in chats track by $index">' +
-                '    <my-chat chat="chat"></my-chat>' +
-                '  </li>' +
-                '</ul>',
+      template: '<div class="my-chat-list" ng-cloak>' +
+                '  <my-chat ng-repeat="chat in chats track by $index" chat="chat"></my-chat>' +
+                '</div>',
       link: function(scope, element, attrs) {
         // chats配列を監視して、変化があればスクロールを最下部に移動する
         scope.$watchCollection('chats', function(newValue, oldValue, scope) {
@@ -37,12 +35,29 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         chat: '='
       },
-      template: '<div class="my-chat" chat-id="{{chat._id}}">' +
-                '  {{chat.userName}} ({{chat.createdDate | date: "yyyy/MM/dd HH:mm:ss"}})<br>' +
-                '  <span class="message">{{chat.message}}</span>' +
-                '</div>',
+      template: '<table chat-id="{{chat._id}}" style="margin-left: 10px; width: 95%"' +
+                '  <tr>' +
+                '    <td class="my-chat">' +
+                '      {{chat.userName}} ({{chat.createdDate | date: "yyyy/MM/dd HH:mm:ss"}})<br>' +
+                '      <span class="message">{{chat.message}}</span>' +
+                '    </td>' +
+                '    <td rowspan="2" style="width: 70px; text-align: right">' +
+                '      <input type="button" value="削除" ng-click="delete()">' +
+                '    </td>' +
+                '  </tr>' +
+                '</table>',
+      controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
+        $scope.WebSocket = WebSocket;
+      }],
       link: function(scope, element, attrs) {
-        element.draggable({helper: 'clone'});
+        $('.my-chat', element).draggable({helper: 'clone'});
+
+        // 削除ボタン押下時のイベント処理
+        scope.delete = function() {
+          if(window.confirm('削除してもよろしいですか？')) {
+            scope.WebSocket.emit('chat-delete', scope.chat._id);
+          }
+        }
       }
     };
   })
@@ -54,11 +69,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         memos: '='
       },
-      template: '<ul class="my-chat-list" ng-cloak>' +
-                '  <li ng-repeat="memo in memos track by $index">' +
-                '    <my-memo memo="memo"></my-memo>' +
-                '  </li>' +
-                '</ul>',
+      template: '<div class="my-chat-list" ng-cloak>' +
+                '    <my-memo ng-repeat="memo in memos track by $index" memo="memo"></my-memo>' +
+                '</div>',
       link: function(scope, element, attrs) {
         // chats配列を監視して、変化があればスクロールを最下部に移動する
         scope.$watchCollection('memos', function(newValue, oldValue, scope) {
@@ -75,11 +88,38 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         memo: '='
       },
-      template: '<div class="my-chat" memo-id="{{memo._id}}">' +
-                '  <span class="message">{{memo.message}}</span>' +
-                '</div>',
+      template: '<table chat-id="{{chat._id}}" style="margin-left: 10px; width: 95%"' +
+                '  <tr>' +
+                '    <td class="my-chat">' +
+                '      <span class="message">{{memo.message}}</span>' +
+                '    </td>' +
+                '    <td rowspan="2" style="width: 70px; text-align: right">' +
+                '      <input type="button" value="削除" ng-click="delete()">' +
+                '    </td>' +
+                '  </tr>' +
+                '</table>',
+      controller: ['$scope', '$http', function($scope, $http) {
+        // 削除ボタン押下時の処理
+        $scope.delete = function() {
+          if(window.confirm('削除してもよろしいですか？')) {
+            $http.post('./memo-delete', { memoId: $scope.memo._id })
+              .success(function(data, status, headers, config) {
+                if(data) {
+                  // 応急処置で親スコープからメモリストを取ってくる
+                  var memos = $scope.$parent.$parent.memos;
+                  for(var i = 0; i < memos.length; i++) {
+                    if(memos[i]._id === $scope.memo._id) {
+                      memos.splice(i, 1);
+                      break;
+                    }
+                  }
+                }
+              });
+          }
+        };
+      }],
       link: function(scope, element, attrs) {
-        element.draggable({helper: 'clone'});
+        $('.my-chat', element).draggable({helper: 'clone'});
       }
     };
   })
@@ -883,16 +923,25 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       });
     });
 
-    // チャットとメモリストを取得する
+    // チャットに関する処理
     $scope.chats = ChatService.getDataList('./chats');
-    $scope.memos = ChatService.getDataList('./memos');
     // chatというイベントを受信した時
     WebSocket.on('chat', function(chat) {
       $timeout(function() {
         $scope.chats.push(chat);
       });
     });
-
+    // チャット削除イベントを受信した時
+    WebSocket.on('chat-delete', function(chatId) {
+      $timeout(function() {
+        for(var i = 0; i < $scope.chats.length; i++) {
+          if($scope.chats[i]._id === chatId) {
+            $scope.chats.splice(i, 1);
+            break;
+          }
+        }
+      });
+    });
     // submitイベント時の処理
     $scope.sendMessage = function() {
       if($scope.chat.message === '') {
@@ -902,6 +951,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       WebSocket.emit('chat', $scope.chat.message);
       $scope.chat.message = '';
     };
+
+    // 個人用メモに関する処理
+    $scope.memos = ChatService.getDataList('./memos');
     $scope.sendMemo = function() {
       if($scope.memo.message === '') {
         return;
