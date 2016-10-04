@@ -33,8 +33,8 @@ block content
               label(for='message') 内容：
               input#message(name='message', type='text', ng-model='chat.message')
               input(type='submit', value='送信')
-          uib-tab(index='1', heading='ログ')
-            span 音声通話などのログ
+          uib-tab(index='1', heading='音声ログ')
+            my-voice-log-list(voice-logs='voiceLogs')
           uib-tab(index='2', heading='個人用メモ')
             my-memo-list(memos='memos')
             form(ng-submit='sendMemo()')

@@ -2,6 +2,8 @@ navigator.getUserMedia = navigator.getUserMedia ||
                          navigator.webkitGetUserMedia ||
                          navigator.mozGetUserMedia;
 
+window.SpeechRecognition = window.SpeechRecognition || webkitSpeechRecognition;
+
 angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   // 改行を<br>に変換するフィルター
   .filter('nl2br', function() {
@@ -65,6 +67,92 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       }
     };
   })
+  // 音声ログ一覧を表示するディレクティブ
+  .directive('myVoiceLogList', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        voiceLogs: '='
+      },
+      template: '<div class="my-chat-list" ng-cloak>' +
+                '  <my-voice-log ng-repeat="voiceLog in voiceLogs track by $index" voice-log="voiceLog"></my-voice-log>' +
+                '</div>',
+      controller: ['$scope', function($scope) {
+        var doRecognition = function() {
+          var recognition = new window.SpeechRecognition();
+          recognition.lang = 'ja';
+
+          recognition.onsoundstart = function() {
+            console.log('sound start');
+          };
+          recognition.onsoundend = function() {
+            console.log('sound end');
+            doRecognition();
+          }
+
+          recognition.onresult = function(event) {
+            var results = event.results;
+            for(var i = event.resultIndex; i < results.length; i++) {
+              console.log(results[i][0].transcript);
+              $scope.voiceLogs.push({ message: results[i][0].transcript });
+            }
+          }
+          recognition.start();
+        };
+        doRecognition();
+      }],
+      link: function(scope, element, attrs) {
+        // voiceLogs配列を監視して、変化があればスクロールを最下部に移動する
+        scope.$watchCollection('voiceLogs', function(newValue, oldValue, scope) {
+          element[0].scrollTop = element[0].scrollHeight;
+        });
+      }
+    }
+  })
+  // 音声ログディレクティブ
+  .directive('myVoiceLog', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        voiceLog: '='
+      },
+      template: '<table style="margin-left: 10px; width: 95%"' +
+                '  <tr>' +
+                '    <td class="my-chat">' +
+                '      <span class="message">{{voiceLog.message}}</span>' +
+                '    </td>' +
+                '    <td rowspan="2" style="width: 70px; text-align: right">' +
+                '      <input type="button" value="削除" ng-click="delete()">' +
+                '    </td>' +
+                '  </tr>' +
+                '</table>',
+      controller: ['$scope', '$http', function($scope, $http) {
+        // 削除ボタン押下時の処理
+        // $scope.delete = function() {
+        //   if(window.confirm('削除してもよろしいですか？')) {
+        //     $http.post('./memo-delete', { memoId: $scope.memo._id })
+        //       .success(function(data, status, headers, config) {
+        //         if(data) {
+        //           // 応急処置で親スコープからメモリストを取ってくる
+        //           var memos = $scope.$parent.$parent.memos;
+        //           for(var i = 0; i < memos.length; i++) {
+        //             if(memos[i]._id === $scope.memo._id) {
+        //               memos.splice(i, 1);
+        //               break;
+        //             }
+        //           }
+        //         }
+        //       });
+        //   }
+        // };
+      }],
+      link: function(scope, element, attrs) {
+        $('.my-chat', element).draggable({helper: 'clone'});
+      }
+    }
+  })
   // 個人用メモ一覧を表示するディレクティブ
   .directive('myMemoList', function() {
     return {
@@ -74,7 +162,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         memos: '='
       },
       template: '<div class="my-chat-list" ng-cloak>' +
-                '    <my-memo ng-repeat="memo in memos track by $index" memo="memo"></my-memo>' +
+                '  <my-memo ng-repeat="memo in memos track by $index" memo="memo"></my-memo>' +
                 '</div>',
       link: function(scope, element, attrs) {
         // chats配列を監視して、変化があればスクロールを最下部に移動する
@@ -92,7 +180,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         memo: '='
       },
-      template: '<table chat-id="{{chat._id}}" style="margin-left: 10px; width: 95%"' +
+      template: '<table style="margin-left: 10px; width: 95%"' +
                 '  <tr>' +
                 '    <td class="my-chat">' +
                 '      <span class="message">{{memo.message}}</span>' +
@@ -1091,6 +1179,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       WebSocket.emit('chat', $scope.chat.message);
       $scope.chat.message = '';
     };
+
+    // 音声ログに関する処理
+    $scope.voiceLogs = [];
 
     // 個人用メモに関する処理
     $scope.memos = ChatService.getDataList('./memos');
