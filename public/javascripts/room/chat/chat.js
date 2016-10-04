@@ -870,15 +870,17 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
                 '  <a href="">' +
                 '    <img ng-src="/images/{{isMicUse ? \'mic_on\' : \'mic_off\'}}.png" ng-click="toggleMicUse()" />' +
                 '  </a>' +
-                '  <section></section>' +
+                '  <section style="display: none"></section>' +
                 '</span>',
       controller: ['$scope', '$element', 'WebSocket', function($scope, $element, WebSocket) {
         // マイクのフラグ設定
-        $scope.isMicUse = true;
+        $scope.isMicUse = false;
         $scope.toggleMicUse = function() {
           $scope.isMicUse = !$scope.isMicUse;
+          // マイクの使用の有無に応じて音声通話の参加・退出を行う
+          if($scope.isMicUse) WebSocket.emit('voice-chat-join',  WebSocket.id);
+          else                WebSocket.emit('voice-chat-leave', WebSocket.id);
         };
-
 
         // 音声の使用を使用する
         navigator.getUserMedia({ audio: true }, function(stream) {
@@ -895,12 +897,18 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
               console.log('%sにcallされました。', call.peer);
               call.answer(stream);
             });
+            $scope.isMicUse = true;
           });
 
           WebSocket.on('peer-keys', function(keys) {
             console.log('peer-keys', keys);
             var $audios = $('section', $element);
             $audios.children().remove();
+
+            // キーが来なかったらスキップ
+            if(!keys) {
+              return;
+            }
 
             // 自分自身のキーは取り除く
             var index = keys.indexOf(WebSocket.id);

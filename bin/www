@@ -366,10 +366,7 @@ io.sockets.on('connection', function(socket) {
     io.to(room._id).emit('meeting-count', meeting[room._id].time);
   });
 
-
-  // peerサーバ接続時
-  peerServer.on('connection', function(key) {
-    console.log('peerServer connected', key);
+  var joinVoiceChat = function(key) {
     // 初めて参加される場合は初期化をする
     if(!peerKeys[room._id]) {
       peerKeys[room._id] = [];
@@ -382,10 +379,8 @@ io.sockets.on('connection', function(socket) {
 
       io.to(room._id).emit('peer-keys', peerKeys[room._id]);
     }
-  });
-
-  // peerサーバ切断時
-  peerServer.on('disconnect', function(key) {
+  };
+  var leaveVoiceChat = function(key) {
     // 既に削除されているならスキップ
     if(typeof peerKeys[room._id] === 'undefined') {
       console.log('skip');
@@ -398,12 +393,30 @@ io.sockets.on('connection', function(socket) {
         break;
       }
     }
-    console.log('peerServer disconnect', key);
 
     if(peerKeys[room._id].length === 0) {
       delete peerKeys[room._id];
     }
-
     io.to(room._id).emit('peer-keys', peerKeys[room._id]);
+  }
+
+  // peerサーバ接続時
+  peerServer.on('connection', function(key) {
+    console.log('peerServer connected', key);
+    joinVoiceChat(key);
+  });
+
+  // peerサーバ切断時
+  peerServer.on('disconnect', function(key) {
+    console.log('peerServer disconnect', key);
+    leaveVoiceChat(key);
+  });
+
+  // 音声通話の参加・不参加イベント
+  socket.on('voice-chat-join', function(key) {
+    joinVoiceChat(key);
+  });
+  socket.on('voice-chat-leave', function(key) {
+    leaveVoiceChat(key);
   });
 });
