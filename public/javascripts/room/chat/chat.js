@@ -1,3 +1,7 @@
+navigator.getUserMedia = navigator.getUserMedia ||
+                         navigator.webkitGetUserMedia ||
+                         navigator.mozGetUserMedia;
+
 angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   // 改行を<br>に変換するフィルター
   .filter('nl2br', function() {
@@ -853,6 +857,77 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
           window.alert(finSection + nextSection);
         });
       }]
+    }
+  })
+  // 音声通話を操作するディレクティブ
+  .directive('myMic', function() {
+    return {
+      restrict: 'E',
+      replace:  true,
+      scope: {
+      },
+      template: '<span>' +
+                '  <a href="">' +
+                '    <img ng-src="/images/{{isMicUse ? \'mic_on\' : \'mic_off\'}}.png" ng-click="toggleMicUse()" />' +
+                '  </a>' +
+                '  <section></section>' +
+                '</span>',
+      controller: ['$scope', '$element', 'WebSocket', function($scope, $element, WebSocket) {
+        // マイクのフラグ設定
+        $scope.isMicUse = true;
+        $scope.toggleMicUse = function() {
+          $scope.isMicUse = !$scope.isMicUse;
+        };
+
+
+        // 音声の使用を使用する
+        navigator.getUserMedia({ audio: true }, function(stream) {
+          var peer;
+          WebSocket.on('connect', function() {
+            console.log('connect');
+            var options = {
+              host: location.hostname,
+              port: location.port,
+              path: '/peer'
+            };
+            peer = new Peer(WebSocket.id, options);
+            peer.on('call', function(call) {
+              console.log('%sにcallされました。', call.peer);
+              call.answer(stream);
+            });
+          });
+
+          WebSocket.on('peer-keys', function(keys) {
+            console.log('peer-keys', keys);
+            var $audios = $('section', $element);
+            $audios.children().remove();
+
+            // 自分自身のキーは取り除く
+            var index = keys.indexOf(WebSocket.id);
+            if(index !== -1) {
+              keys.splice(index, 1);
+            }
+
+            keys.forEach(function(key) {
+              var call = peer.call(key, stream);
+              if(typeof call === 'undefined') {
+                console.log('undefined key', key);
+                return;
+              }
+              call.on('stream', function(remoteStream) {
+                var audio = new Audio;
+                audio.src = URL.createObjectURL(remoteStream);
+                audio.controls = true;
+                audio.play();
+
+                $audios.append(audio);
+              });
+            });
+          });
+        }, function(error) {
+          alert('Failed to get local stream' ,error);
+        });
+      }],
     }
   })
   .service('ChatService', ['$http', function($http) {

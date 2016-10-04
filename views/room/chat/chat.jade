@@ -16,8 +16,7 @@ block content
       td(colspan='3', width='80%')
         my-schedule(schedule='schedule')
       td(width='10%', style='text-align: center')
-        a(href='')
-          img(src='/images/mic_off.png')
+        my-mic
         span &nbsp;&nbsp;
         a(href='/')
           img(src='/images/exit.png', alt='退出', title='退出')
@@ -85,6 +84,7 @@ block scripts
   script(src='https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/2.0.2/ui-bootstrap.min.js')
   script(src='https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/2.0.2/ui-bootstrap-tpls.min.js')
   script(src='https://ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular-sanitize.min.js')
+  script(src='https://cdnjs.cloudflare.com/ajax/libs/peerjs/0.3.14/peer.js')
   script(src='/socket.io/socket.io.js')
   script(src='/javascripts/contextMenu.js')
   script(src='/javascripts/room/chat/chat.js')
