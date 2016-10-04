@@ -2,6 +2,8 @@ navigator.getUserMedia = navigator.getUserMedia ||
                          navigator.webkitGetUserMedia ||
                          navigator.mozGetUserMedia;
 
+window.SpeechRecognition = window.SpeechRecognition || webkitSpeechRecognition;
+
 angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
   // 改行を<br>に変換するフィルター
   .filter('nl2br', function() {
@@ -65,6 +67,100 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       }
     };
   })
+  // 音声ログ一覧を表示するディレクティブ
+  .directive('myVoiceLogList', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        voiceLogs : '=',
+        micState  : '='
+      },
+      template: '<div class="my-chat-list" ng-cloak>' +
+                '  <my-voice-log ng-repeat="voiceLog in voiceLogs track by $index" voice-log="voiceLog"></my-voice-log>' +
+                '</div>',
+      controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
+        var isRecognizing = false;
+        var isRecognized  = false;
+        var doRecognition = function() {
+          var recognition = new window.SpeechRecognition();
+          recognition.lang = 'ja';
+
+          recognition.onsoundstart = function() {
+            console.log('sound start');
+            isRecognizing = true;
+          };
+          recognition.onsoundend = function() {
+            console.log('sound end');
+            isRecognizing = false;
+            if($scope.micState.isUse) {
+              doRecognition();
+            }
+          }
+
+          recognition.onresult = function(event) {
+            var results = event.results;
+            for(var i = event.resultIndex; i < results.length; i++) {
+              console.log(results[i][0].transcript);
+              isRecognized = true;
+              WebSocket.emit('voice-log', results[i][0].transcript);
+            }
+          }
+          recognition.start();
+        };
+        setInterval(function() {
+          // 認識を一度を終えているならスキップ
+          if(isRecognized) {
+            isRecognized = false;
+            return;
+          }
+
+          if($scope.micState.isUse && !isRecognizing) {
+            console.log('mic reactivation.');
+            doRecognition();
+          }
+        }, 10000);
+      }],
+      link: function(scope, element, attrs) {
+        // voiceLogs配列を監視して、変化があればスクロールを最下部に移動する
+        scope.$watchCollection('voiceLogs', function(newValue, oldValue, scope) {
+          element[0].scrollTop = element[0].scrollHeight;
+        });
+      }
+    }
+  })
+  // 音声ログディレクティブ
+  .directive('myVoiceLog', function() {
+    return {
+      restrict: 'E',
+      replace: true,
+      scope: {
+        voiceLog: '='
+      },
+      template: '<table style="margin-left: 10px; width: 95%"' +
+                '  <tr>' +
+                '    <td class="my-chat">' +
+                '      {{voiceLog.userName}} ({{voiceLog.createdDate | date: "yyyy/MM/dd HH:mm:ss"}})<br>' +
+                '      <span class="message">{{voiceLog.message}}</span>' +
+                '    </td>' +
+                '    <td rowspan="2" style="width: 70px; text-align: right">' +
+                '      <input type="button" value="削除" ng-click="delete()">' +
+                '    </td>' +
+                '  </tr>' +
+                '</table>',
+      controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
+        // 削除ボタン押下時の処理
+        $scope.delete = function() {
+          if(window.confirm('削除してもよろしいですか？')) {
+            WebSocket.emit('voice-log-delete', $scope.voiceLog._id);
+          }
+        };
+      }],
+      link: function(scope, element, attrs) {
+        $('.my-chat', element).draggable({helper: 'clone'});
+      }
+    }
+  })
   // 個人用メモ一覧を表示するディレクティブ
   .directive('myMemoList', function() {
     return {
@@ -74,7 +170,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         memos: '='
       },
       template: '<div class="my-chat-list" ng-cloak>' +
-                '    <my-memo ng-repeat="memo in memos track by $index" memo="memo"></my-memo>' +
+                '  <my-memo ng-repeat="memo in memos track by $index" memo="memo"></my-memo>' +
                 '</div>',
       link: function(scope, element, attrs) {
         // chats配列を監視して、変化があればスクロールを最下部に移動する
@@ -92,7 +188,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         memo: '='
       },
-      template: '<table chat-id="{{chat._id}}" style="margin-left: 10px; width: 95%"' +
+      template: '<table style="margin-left: 10px; width: 95%"' +
                 '  <tr>' +
                 '    <td class="my-chat">' +
                 '      <span class="message">{{memo.message}}</span>' +
@@ -865,21 +961,22 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       restrict: 'E',
       replace:  true,
       scope: {
+        state: '='
       },
       template: '<span>' +
                 '  <a href="">' +
-                '    <img ng-src="/images/{{isMicUse ? \'mic_on\' : \'mic_off\'}}.png" ng-click="toggleMicUse()" />' +
+                '    <img ng-src="/images/{{state.isUse ? \'mic_on\' : \'mic_off\'}}.png" ng-click="toggleMicUse()" />' +
                 '  </a>' +
                 '  <section style="display: none"></section>' +
                 '</span>',
       controller: ['$scope', '$element', 'WebSocket', function($scope, $element, WebSocket) {
         // マイクのフラグ設定
-        $scope.isMicUse = false;
+        $scope.state.isUse = false;
         $scope.toggleMicUse = function() {
-          $scope.isMicUse = !$scope.isMicUse;
+          $scope.state.isUse = !$scope.state.isUse;
           // マイクの使用の有無に応じて音声通話の参加・退出を行う
-          if($scope.isMicUse) WebSocket.emit('voice-chat-join',  WebSocket.id);
-          else                WebSocket.emit('voice-chat-leave', WebSocket.id);
+          if($scope.state.isUse) WebSocket.emit('voice-chat-join',  WebSocket.id);
+          else                   WebSocket.emit('voice-chat-leave', WebSocket.id);
         };
 
         // 音声の使用を使用する
@@ -897,7 +994,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
               console.log('%sにcallされました。', call.peer);
               call.answer(stream);
             });
-            $scope.isMicUse = true;
+            $scope.state.isUse = true;
           });
 
           WebSocket.on('peer-keys', function(keys) {
@@ -1016,6 +1113,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
     $scope.memo = {
       message: ''
     };
+    $scope.micState = {
+      isUse: false
+    };
 
     // メンバーリスト
     $scope.members = [];
@@ -1091,6 +1191,26 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       WebSocket.emit('chat', $scope.chat.message);
       $scope.chat.message = '';
     };
+
+    // 音声ログに関する処理
+    $scope.voiceLogs = ChatService.getDataList('./voice-logs');
+    // 音声ログ受信時
+    WebSocket.on('voice-log', function(voiceLog) {
+      $timeout(function() {
+        $scope.voiceLogs.push(voiceLog);
+      });
+    });
+    // 音声ログ削除イベント受信時
+    WebSocket.on('voice-log-delete', function(voiceLogId) {
+      $timeout(function() {
+        for(var i = 0; i < $scope.voiceLogs.length; i++) {
+          if($scope.voiceLogs[i]._id === voiceLogId) {
+            $scope.voiceLogs.splice(i, 1);
+            break;
+          }
+        }
+      });
+    });
 
     // 個人用メモに関する処理
     $scope.memos = ChatService.getDataList('./memos');

@@ -400,6 +400,28 @@ io.sockets.on('connection', function(socket) {
     io.to(room._id).emit('peer-keys', peerKeys[room._id]);
   }
 
+  // voice-logというイベントを受信した時、送られた内容を全てのクライアントに送信する
+  socket.on('voice-log', function(message) {
+    var newVoiceLog = new (mongoose.model('VoiceLog'))();
+    newVoiceLog.message = message;
+    // 接続情報を元に必要項目を代入
+    newVoiceLog.roomId   = room._id;
+    newVoiceLog.userName = user.userName;
+    console.log(newVoiceLog);
+    newVoiceLog.save();
+    // roomIdグループ全体にチャットイベントを通知する
+    io.to(room._id).emit('voice-log', newVoiceLog);
+  });
+  // voice-logの削除イベントを受信した時
+  socket.on('voice-log-delete', function(voiceLogId) {
+    mongoose.model('VoiceLog').remove({ _id: voiceLogId }, function(err) {
+      if(err) {
+        console.log(err);
+      }
+    });
+    io.to(room._id).emit('voice-log-delete', voiceLogId);
+  });
+
   // peerサーバ接続時
   peerServer.on('connection', function(key) {
     console.log('peerServer connected', key);
