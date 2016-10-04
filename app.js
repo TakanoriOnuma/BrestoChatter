@@ -64,6 +64,14 @@ mongoose.model('Memo', new mongoose.Schema({
   createdDate : { type: Date, default: Date.now }
 }));
 
+// VoiceLogモデルの登録
+mongoose.model('VoiceLog', new mongoose.Schema({
+  roomId      : Object,
+  userName    : String,
+  message     : String,
+  createdDate : { type: Date, default: Date.now }
+}));
+
 // PostItモデルの登録
 mongoose.model('PostIt', new mongoose.Schema({
   roomId    : Object,

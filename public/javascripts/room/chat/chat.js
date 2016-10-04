@@ -78,7 +78,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       template: '<div class="my-chat-list" ng-cloak>' +
                 '  <my-voice-log ng-repeat="voiceLog in voiceLogs track by $index" voice-log="voiceLog"></my-voice-log>' +
                 '</div>',
-      controller: ['$scope', function($scope) {
+      controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
         var doRecognition = function() {
           var recognition = new window.SpeechRecognition();
           recognition.lang = 'ja';
@@ -95,7 +95,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
             var results = event.results;
             for(var i = event.resultIndex; i < results.length; i++) {
               console.log(results[i][0].transcript);
-              $scope.voiceLogs.push({ message: results[i][0].transcript });
+              WebSocket.emit('voice-log', results[i][0].transcript);
             }
           }
           recognition.start();
@@ -121,6 +121,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       template: '<table style="margin-left: 10px; width: 95%"' +
                 '  <tr>' +
                 '    <td class="my-chat">' +
+                '      {{voiceLog.userName}} ({{voiceLog.createdDate | date: "yyyy/MM/dd HH:mm:ss"}})<br>' +
                 '      <span class="message">{{voiceLog.message}}</span>' +
                 '    </td>' +
                 '    <td rowspan="2" style="width: 70px; text-align: right">' +
@@ -128,25 +129,13 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
                 '    </td>' +
                 '  </tr>' +
                 '</table>',
-      controller: ['$scope', '$http', function($scope, $http) {
+      controller: ['$scope', 'WebSocket', function($scope, WebSocket) {
         // 削除ボタン押下時の処理
-        // $scope.delete = function() {
-        //   if(window.confirm('削除してもよろしいですか？')) {
-        //     $http.post('./memo-delete', { memoId: $scope.memo._id })
-        //       .success(function(data, status, headers, config) {
-        //         if(data) {
-        //           // 応急処置で親スコープからメモリストを取ってくる
-        //           var memos = $scope.$parent.$parent.memos;
-        //           for(var i = 0; i < memos.length; i++) {
-        //             if(memos[i]._id === $scope.memo._id) {
-        //               memos.splice(i, 1);
-        //               break;
-        //             }
-        //           }
-        //         }
-        //       });
-        //   }
-        // };
+        $scope.delete = function() {
+          if(window.confirm('削除してもよろしいですか？')) {
+            WebSocket.emit('voice-log-delete', $scope.voiceLog._id);
+          }
+        };
       }],
       link: function(scope, element, attrs) {
         $('.my-chat', element).draggable({helper: 'clone'});
@@ -1181,7 +1170,24 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
     };
 
     // 音声ログに関する処理
-    $scope.voiceLogs = [];
+    $scope.voiceLogs = ChatService.getDataList('./voice-logs');
+    // 音声ログ受信時
+    WebSocket.on('voice-log', function(voiceLog) {
+      $timeout(function() {
+        $scope.voiceLogs.push(voiceLog);
+      });
+    });
+    // 音声ログ削除イベント受信時
+    WebSocket.on('voice-log-delete', function(voiceLogId) {
+      $timeout(function() {
+        for(var i = 0; i < $scope.voiceLogs.length; i++) {
+          if($scope.voiceLogs[i]._id === voiceLogId) {
+            $scope.voiceLogs.splice(i, 1);
+            break;
+          }
+        }
+      });
+    });
 
     // 個人用メモに関する処理
     $scope.memos = ChatService.getDataList('./memos');
