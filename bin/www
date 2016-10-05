@@ -6,7 +6,7 @@
 
 var app = require('../app');
 var debug = require('debug')('brestoChatter:server');
-var http = require('http');
+var https = require('https');
 
 /**
  * Get port from environment and store in Express.
@@ -19,15 +19,18 @@ app.set('port', port);
  * Create HTTP server.
  */
 
-var server = http.createServer(app);
+var fs = require('fs');
+var options = {pfx: fs.readFileSync('secure.pfx'),
+               passphrase: 'brestochatter'};
+var httpsServer = https.createServer(options, app);
 
 /**
  * Listen on provided port, on all network interfaces.
  */
 
-server.listen(port);
-server.on('error', onError);
-server.on('listening', onListening);
+httpsServer.listen(port);
+httpsServer.on('error', onError);
+httpsServer.on('listening', onListening);
 
 /**
  * Normalize a port into a number, string, or false.
@@ -82,18 +85,22 @@ function onError(error) {
  */
 
 function onListening() {
-  var addr = server.address();
+  var addr = httpsServer.address();
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
 }
 
+// peerServerの立ち上げ
+var peerServer = require('peer').ExpressPeerServer(httpsServer);
+app.use('/peer', peerServer);
+
 // mongoDB操作モジュールの読み込み
 var mongoose = require('mongoose');
 
 // 受信側のSocketの用意し、セッション情報を共有するように設定する
-var io = require('socket.io').listen(server);
+var io = require('socket.io').listen(httpsServer);
 var sharedsession = require('express-socket.io-session');
 io.use(sharedsession(app.session));
 
@@ -101,6 +108,8 @@ io.use(sharedsession(app.session));
 var members = {};
 // 各部屋ごとのスケジュール状態
 var meeting = {};
+// peerサーバで使用するキー
+var peerKeys = {};
 io.sockets.on('connection', function(socket) {
   // 接続idを確認
   console.log('connected', socket.id);
@@ -358,5 +367,81 @@ io.sockets.on('connection', function(socket) {
     // この順番で通知しないと更新後の表示が上手くいかない
     io.to(room._id).emit('meeting-active-section', meeting[room._id].activeNum);
     io.to(room._id).emit('meeting-count', meeting[room._id].time);
+  });
+
+  var joinVoiceChat = function(key) {
+    // 初めて参加される場合は初期化をする
+    if(!peerKeys[room._id]) {
+      peerKeys[room._id] = [];
+    }
+
+    // keyがまだ登録されていない時だけ登録する
+    var idx = peerKeys[room._id].indexOf(key);
+    if(idx === -1) {
+      peerKeys[room._id].push(key);
+
+      io.to(room._id).emit('peer-keys', peerKeys[room._id]);
+    }
+  };
+  var leaveVoiceChat = function(key) {
+    // 既に削除されているならスキップ
+    if(typeof peerKeys[room._id] === 'undefined') {
+      console.log('skip');
+      return;
+    }
+
+    for(var i = 0; i < peerKeys[room._id].length; i++) {
+      if(peerKeys[room._id][i] === key) {
+        peerKeys[room._id].splice(i, 1);
+        break;
+      }
+    }
+
+    if(peerKeys[room._id].length === 0) {
+      delete peerKeys[room._id];
+    }
+    io.to(room._id).emit('peer-keys', peerKeys[room._id]);
+  }
+
+  // voice-logというイベントを受信した時、送られた内容を全てのクライアントに送信する
+  socket.on('voice-log', function(message) {
+    var newVoiceLog = new (mongoose.model('VoiceLog'))();
+    newVoiceLog.message = message;
+    // 接続情報を元に必要項目を代入
+    newVoiceLog.roomId   = room._id;
+    newVoiceLog.userName = user.userName;
+    console.log(newVoiceLog);
+    newVoiceLog.save();
+    // roomIdグループ全体にチャットイベントを通知する
+    io.to(room._id).emit('voice-log', newVoiceLog);
+  });
+  // voice-logの削除イベントを受信した時
+  socket.on('voice-log-delete', function(voiceLogId) {
+    mongoose.model('VoiceLog').remove({ _id: voiceLogId }, function(err) {
+      if(err) {
+        console.log(err);
+      }
+    });
+    io.to(room._id).emit('voice-log-delete', voiceLogId);
+  });
+
+  // peerサーバ接続時
+  peerServer.on('connection', function(key) {
+    console.log('peerServer connected', key);
+    joinVoiceChat(key);
+  });
+
+  // peerサーバ切断時
+  peerServer.on('disconnect', function(key) {
+    console.log('peerServer disconnect', key);
+    leaveVoiceChat(key);
+  });
+
+  // 音声通話の参加・不参加イベント
+  socket.on('voice-chat-join', function(key) {
+    joinVoiceChat(key);
+  });
+  socket.on('voice-chat-leave', function(key) {
+    leaveVoiceChat(key);
   });
 });
