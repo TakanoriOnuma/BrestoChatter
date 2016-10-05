@@ -3,8 +3,8 @@ var SCHEDULE = {
   'out-ideas' : [
     { name: 'アイデア出し', time: 10 },
     { name: 'アイデア発散', time: 20 },
-    { name: 'グルーピング', time: 30 },
-    { name: '議論', time: 40 }
+    { name: 'グルーピング', time: 20 },
+    { name: '議論', time: 30 }
   ],
   'persue-ideas' : [
     { name: 'アイデアの確認', time: 10 },
@@ -19,6 +19,12 @@ angular.module('myApp', ['ngMessages'])
       var data = angular.copy($scope.room);
       var hash = CryptoJS.SHA3(data.password);
       data.password = hash.toString(CryptoJS.enc.Base64);
+      // 時間についてはint型に変換しておく
+      for(var i = 0; i < data.schedule.length; i++) {
+        if(typeof data.schedule[i].time === 'string') {
+          data.schedule[i].time = Number(data.schedule[i].time);
+        }
+      }
       $http.post('./registration', data)
         .success(function(data, status, headers, config) {
           console.log(data);

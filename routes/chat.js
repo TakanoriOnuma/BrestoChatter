@@ -24,6 +24,17 @@ router.get('/chats', sessionCheck.enterCheck, function(req, res) {
     });
 });
 
+// /voice-logsにGETアクセスした時、VoiceLog一覧を取得するAPI
+router.get('/voice-logs', sessionCheck.enterCheck, function(req, res) {
+  // roomIdに紐づかれたvoiceLogsを取得して送る
+  mongoose.model('VoiceLog')
+    .find({ roomId: req.session.room._id })
+    .sort('createdDate')
+    .exec(function(err, voiceLogs) {
+      res.send(voiceLogs);
+    });
+});
+
 // /memosにGETアクセスした時、Memo一覧を取得するAPI
 router.get('/memos', sessionCheck.enterCheck, function(req, res) {
   // roomIdとuserIdに紐づかれたmemoを取得して送る

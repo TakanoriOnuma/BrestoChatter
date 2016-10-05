@@ -16,6 +16,7 @@
     "jade": "~1.11.0",
     "mongoose": "^4.5.3",
     "morgan": "~1.7.0",
+    "peer": "^0.2.8",
     "serve-favicon": "~2.3.0",
     "socket.io": "^1.4.8"
   },
