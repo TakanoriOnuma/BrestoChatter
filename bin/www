@@ -6,7 +6,7 @@
 
 var app = require('../app');
 var debug = require('debug')('brestoChatter:server');
-var http = require('http');
+var https = require('https');
 
 /**
  * Get port from environment and store in Express.
@@ -16,18 +16,21 @@ var port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
 /**
- * Create HTTP server.
+ * Create https server.
  */
 
-var httpServer = http.createServer(app);
+var fs = require('fs');
+var secure_options = {pfx: fs.readFileSync('secure.pfx'),
+               passphrase: 'brestochatter'};
+var httpsServer = https.createServer(secure_options, app);
 
 /**
  * Listen on provided port, on all network interfaces.
  */
 
-httpServer.listen(port);
-httpServer.on('error', onError);
-httpServer.on('listening', onListening);
+httpsServer.listen(port);
+httpsServer.on('error', onError);
+httpsServer.on('listening', onListening);
 
 /**
  * Normalize a port into a number, string, or false.
@@ -50,7 +53,7 @@ function normalizePort(val) {
 }
 
 /**
- * Event listener for HTTP server "error" event.
+ * Event listener for https server "error" event.
  */
 
 function onError(error) {
@@ -78,11 +81,11 @@ function onError(error) {
 }
 
 /**
- * Event listener for HTTP server "listening" event.
+ * Event listener for https server "listening" event.
  */
 
 function onListening() {
-  var addr = httpServer.address();
+  var addr = httpsServer.address();
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
@@ -90,14 +93,22 @@ function onListening() {
 }
 
 // peerServerの立ち上げ
-var peerServer = require('peer').ExpressPeerServer(httpServer);
+
+var peer_options = {
+  ssl: {
+    key: fs.readFileSync('server.key'),
+    cert: fs.readFileSync('server.crt')
+  }
+}
+
+var peerServer = require('peer').ExpressPeerServer(httpsServer, peer_options);
 app.use('/peer', peerServer);
 
 // mongoDB操作モジュールの読み込み
 var mongoose = require('mongoose');
 
 // 受信側のSocketの用意し、セッション情報を共有するように設定する
-var io = require('socket.io').listen(httpServer);
+var io = require('socket.io').listen(httpsServer);
 var sharedsession = require('express-socket.io-session');
 io.use(sharedsession(app.session));
 
