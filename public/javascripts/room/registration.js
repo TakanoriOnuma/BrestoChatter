@@ -10,6 +10,10 @@ var SCHEDULE = {
     { name: 'アイデアの確認', time: 10 },
     { name: 'ロジックツリー', time: 20 },
     { name: '議論', time: 30 },
+  ],
+  'demo' : [
+    { name: '実演', time: 90 },
+    { name: '質疑応答', time: 300 }
   ]
 }
 

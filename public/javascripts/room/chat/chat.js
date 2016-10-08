@@ -35,7 +35,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         chat: '='
       },
-      template: '<table chat-id="{{chat._id}}" style="margin-left: 10px; width: 95%"' +
+      template: '<table chat-id="{{chat._id}}" style="margin-left: 10px; width: 95%">' +
                 '  <tr>' +
                 '    <td class="my-chat">' +
                 '      {{chat.userName}} ({{chat.createdDate | date: "yyyy/MM/dd HH:mm:ss"}})<br>' +
@@ -88,7 +88,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         memo: '='
       },
-      template: '<table style="margin-left: 10px; width: 95%"' +
+      template: '<table style="margin-left: 10px; width: 95%">' +
                 '  <tr>' +
                 '    <td class="my-chat">' +
                 '      <span class="message">{{memo.message}}</span>' +
