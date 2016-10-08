@@ -12,6 +12,7 @@ block content
         br
         input(type='password', placeholder='パスワード', ng-model='data.pass[room._id]')
         input(type='submit', value='入場')
+        input(type='button', value='削除', ng-if='room.author === user.userName', ng-click='deleteRoom(room._id)')
         span {{data.error[room._id]}}
 
   a(href='/room/registration') 部屋の作成

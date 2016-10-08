@@ -24,7 +24,7 @@ block content
     tr
       // こっちにheightを書かないとブラウザの互換性を保てない（Chromeとfirefoxにおいては）
       td(colspan='5', height='400px')
-        my-whiteboard.unselect(post-its='postIts', members='members', user='user')
+        my-whiteboard.unselect(title='room.title', post-its='postIts', members='members', user='user')
     tr(height='300px')
       td(colspan='3', valign='top')
         uib-tabset

@@ -70,7 +70,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         memos: '='
       },
       template: '<div class="my-chat-list" ng-cloak>' +
-                '    <my-memo ng-repeat="memo in memos track by $index" memo="memo"></my-memo>' +
+                '  <my-memo ng-repeat="memo in memos track by $index" memo="memo"></my-memo>' +
                 '</div>',
       link: function(scope, element, attrs) {
         // chats配列を監視して、変化があればスクロールを最下部に移動する
@@ -88,7 +88,7 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       scope: {
         memo: '='
       },
-      template: '<table chat-id="{{chat._id}}" style="margin-left: 10px; width: 95%"' +
+      template: '<table style="margin-left: 10px; width: 95%"' +
                 '  <tr>' +
                 '    <td class="my-chat">' +
                 '      <span class="message">{{memo.message}}</span>' +
@@ -129,12 +129,13 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       restrict: 'E',
       replace: true,
       scope: {
+        title   : '=',
         postIts : '=',
         members : '=',
         user    : '='
       },
       template: '<div class="my-whiteboard">' +
-                '  <span>ホワイトボード</span>' +
+                '  <span class="my-board-title">{{title}}</span>' +
                 '  <my-post-it ng-repeat="postIt in postIts" post-it="postIt">' +
                 '  </my-post-it>' +
                 '  <my-cursor ng-repeat="member in members | filter: myFilter" pos="member.position" color-name="member.cursorColorName"></my-cursor>' +
@@ -860,13 +861,25 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
     this.getDataList = function(url) {
       var dataList = [];
       $http({
-        method: 'GET',
-        url:    url
+        method : 'GET',
+        url    : url
       })
       .success(function(data, status, headers, config) {
         angular.extend(dataList, data);
       });
       return dataList;
+    }
+    // データオブジェクトを取得する
+    this.getDataObject = function(url) {
+      var dataObject = {};
+      $http({
+        method : 'GET',
+        url    : url
+      })
+      .success(function(data, status, headers, config) {
+        angular.extend(dataObject, data);
+      });
+      return dataObject;
     }
   }])
   // socket.ioのシングルトンラッパー
@@ -925,6 +938,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         $scope.schedule = schedule;
       });
     });
+
+    // 部屋情報を取得
+    $scope.room = ChatService.getDataObject('/room/roominfo');
 
     // 参照できるようにあらかじめ初期化する
     $scope.chat = {

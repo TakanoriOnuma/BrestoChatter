@@ -23,11 +23,18 @@
   background-color: #aaf;
 }
 
+.my-board-title {
+  font-size: 20px;
+  border-bottom: solid 1px black;
+  border-right:  solid 1px black;
+}
+
 .my-whiteboard {
   width: 100%;
   height: 100%;
   position: relative;
   overflow: scroll;
+  padding: 0;
 }
 
 .my-post-it {
