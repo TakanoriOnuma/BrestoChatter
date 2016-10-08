@@ -54,4 +54,28 @@ router.post('/registration', function(req, res, next) {
   }
 });
 
+// 部屋の削除
+router.post('/delete', function(req, res, next) {
+  var roomId = req.body.roomId;
+  // roomIdに関連づいている情報を全て削除
+  mongoose.model('Chat').remove({ roomId: roomId }, function(err) {
+    if(err) console.log(err);
+  });
+  mongoose.model('VoiceLog').remove({ roomId: roomId }, function(err) {
+    if(err) console.log(err);
+  });
+  mongoose.model('Memo').remove({ roomId: roomId }, function(err) {
+    if(err) console.log(err);
+  });
+  mongoose.model('PostIt').remove({ roomId: roomId }, function(err) {
+    if(err) console.log(err);
+  });
+  // 最後にRoomの情報を削除
+  mongoose.model('Room').remove({ _id: roomId }, function(err) {
+    if(err) console.log(err);
+  });
+
+  res.send(true);
+});
+
 module.exports = router;
