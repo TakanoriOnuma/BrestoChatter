@@ -229,12 +229,13 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       restrict: 'E',
       replace: true,
       scope: {
+        title   : '=',
         postIts : '=',
         members : '=',
         user    : '='
       },
       template: '<div class="my-whiteboard">' +
-                '  <span>ホワイトボード</span>' +
+                '  <span class="my-board-title">{{title}}</span>' +
                 '  <my-post-it ng-repeat="postIt in postIts" post-it="postIt">' +
                 '  </my-post-it>' +
                 '  <my-cursor ng-repeat="member in members | filter: myFilter" pos="member.position" color-name="member.cursorColorName"></my-cursor>' +
@@ -1040,13 +1041,25 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
     this.getDataList = function(url) {
       var dataList = [];
       $http({
-        method: 'GET',
-        url:    url
+        method : 'GET',
+        url    : url
       })
       .success(function(data, status, headers, config) {
         angular.extend(dataList, data);
       });
       return dataList;
+    }
+    // データオブジェクトを取得する
+    this.getDataObject = function(url) {
+      var dataObject = {};
+      $http({
+        method : 'GET',
+        url    : url
+      })
+      .success(function(data, status, headers, config) {
+        angular.extend(dataObject, data);
+      });
+      return dataObject;
     }
   }])
   // socket.ioのシングルトンラッパー
@@ -1105,6 +1118,9 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
         $scope.schedule = schedule;
       });
     });
+
+    // 部屋情報を取得
+    $scope.room = ChatService.getDataObject('/room/roominfo');
 
     // 参照できるようにあらかじめ初期化する
     $scope.chat = {

@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 
 var mongoose = require('mongoose');
+var sessionCheck = require('../validation/sessionCheck');
 
 // 部屋一覧を取得
 router.get('/list', function(req, res, next) {
@@ -24,6 +25,10 @@ router.post('/login', function(req, res, next) {
       res.send(false);
     }
   });
+});
+// 入室している部屋情報を取得
+router.get('/roominfo', sessionCheck.enterCheck, function(req, res, next) {
+  res.send(req.session.room)
 })
 // 部屋作成画面
 router.get('/registration', function(req, res, next) {
