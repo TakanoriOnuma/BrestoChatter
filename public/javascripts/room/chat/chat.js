@@ -129,13 +129,13 @@ angular.module('myApp', ['ui.bootstrap', 'ngSanitize'])
       restrict: 'E',
       replace: true,
       scope: {
-        title   : '=',
+        room    : '=',
         postIts : '=',
         members : '=',
         user    : '='
       },
       template: '<div class="my-whiteboard">' +
-                '  <span class="my-board-title">{{title}}</span>' +
+                '  <span class="my-board-title">{{room.title}}</span>' +
                 '  <my-post-it ng-repeat="postIt in postIts" post-it="postIt">' +
                 '  </my-post-it>' +
                 '  <my-cursor ng-repeat="member in members | filter: myFilter" pos="member.position" color-name="member.cursorColorName"></my-cursor>' +
